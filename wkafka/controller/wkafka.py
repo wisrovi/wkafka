@@ -230,6 +230,22 @@ class Wkafka:
 
         return json.dumps(value).encode("utf-8")
 
+    def async_send(
+        self,
+        topic: str,
+        value: dict,
+        key: Optional[str] = None,
+        value_type: Optional[str] = None,
+        headers: Optional[dict] = None,
+        verbose: bool = False,
+    ):
+        thread = threading.Thread(
+            target=self.send,
+            args=(topic, value, key, value_type, headers, verbose),
+            name=f"Consumer-{str(uuid.uuid4())}",
+        )
+        thread.start()
+
     def send(
         self,
         topic: str,
