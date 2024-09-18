@@ -164,12 +164,23 @@ class Wkafka:
         """
         Start all registered Kafka consumers in separate threads.
         """
+
+        threads = []
+
         for consumer, process_func, key_filter, auto_value in self.consumers:
-            threading.Thread(
+            thread = threading.Thread(
                 target=self.__async_receiver,
                 args=(consumer, process_func, key_filter, auto_value),
                 name=f"Consumer-{str(uuid.uuid4())}",
-            ).start()
+            )
+
+            threads.append(thread)
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
 
     """
     Producer Section
