@@ -152,6 +152,12 @@ class Wkafka:
                     offset=message.offset,
                 )
 
+                try:
+                    new_header = self._deserialize(data.header[0][1])
+                    data.header = new_header
+                except:
+                    pass
+
                 if auto_value == "json":
                     data.value = self._deserialize(data.value)
                 elif auto_value == "image":
