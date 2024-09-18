@@ -261,17 +261,26 @@ class Wkafka:
             if not hasattr(self, "producer_instance"):
                 self.producer_instance = self._create_producer()
 
+            extra_headers = {}
+
             if value_type == "json":
                 value = self._serializer(value)
             elif value_type == "file":
                 with open(value, "rb") as f:
                     value = f.read()
             elif value_type == "image":
+                frame_height, frame_width, _ = value.shape
+
+                extra_headers["frame_width"] = frame_width
+                extra_headers["frame_height"] = frame_height
+
                 _, buffer = cv2.imencode(".jpg", value)
                 value = buffer.tobytes()
 
             if headers:
-                headers = [("metadata", self._serializer(headers))]
+                extra_headers.update(headers)
+
+                headers = [("metadata", self._serializer(extra_headers))]
                 if self.name:
                     headers.append(("name", self.name))
 
