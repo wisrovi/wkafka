@@ -1,0 +1,17 @@
+version: "3.7"
+
+services:
+  demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app
+    command: tail -f /dev/null
+
+
+
+networks:
+  default:
+    name: demo
+    external: true

@@ -279,12 +279,12 @@ class Wkafka:
         value: dict,
         key: Optional[str] = None,
         value_type: Optional[str] = None,
-        header: Optional[dict] = None,
+        headers: Optional[dict] = None,
         verbose: bool = False,
     ):
         thread = threading.Thread(
             target=self.send,
-            args=(topic, value, key, value_type, header, verbose),
+            args=(topic, value, key, value_type, headers, verbose),
             name=f"Consumer-{str(uuid.uuid4())}",
         )
         thread.start()

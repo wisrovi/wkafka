@@ -1,0 +1,299 @@
+[
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "yaml",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "yaml",
+        "description": "yaml",
+        "detail": "yaml",
+        "documentation": {}
+    },
+    {
+        "label": "time",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "time",
+        "description": "time",
+        "detail": "time",
+        "documentation": {}
+    },
+    {
+        "label": "threading",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "threading",
+        "description": "threading",
+        "detail": "threading",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka_o.controller",
+        "description": "wkafka_o.controller",
+        "isExtraImport": true,
+        "detail": "wkafka_o.controller",
+        "documentation": {}
+    },
+    {
+        "label": "Consumer_data",
+        "importPath": "wkafka_o.controller.wkafka",
+        "description": "wkafka_o.controller.wkafka",
+        "isExtraImport": true,
+        "detail": "wkafka_o.controller.wkafka",
+        "documentation": {}
+    },
+    {
+        "label": "Pipeline",
+        "importPath": "wpipe.pipe",
+        "description": "wpipe.pipe",
+        "isExtraImport": true,
+        "detail": "wpipe.pipe",
+        "documentation": {}
+    },
+    {
+        "label": "escribir_yaml",
+        "importPath": "wpipe.util",
+        "description": "wpipe.util",
+        "isExtraImport": true,
+        "detail": "wpipe.util",
+        "documentation": {}
+    },
+    {
+        "label": "leer_yaml",
+        "importPath": "wpipe.util",
+        "description": "wpipe.util",
+        "isExtraImport": true,
+        "detail": "wpipe.util",
+        "documentation": {}
+    },
+    {
+        "label": "new_logger",
+        "importPath": "wpipe.log",
+        "description": "wpipe.log",
+        "isExtraImport": true,
+        "detail": "wpipe.log",
+        "documentation": {}
+    },
+    {
+        "label": "ProcessError",
+        "importPath": "wpipe.exception",
+        "description": "wpipe.exception",
+        "isExtraImport": true,
+        "detail": "wpipe.exception",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka",
+        "description": "wkafka",
+        "isExtraImport": true,
+        "detail": "wkafka",
+        "documentation": {}
+    },
+    {
+        "label": "Consumer_data",
+        "importPath": "wkafka",
+        "description": "wkafka",
+        "isExtraImport": true,
+        "detail": "wkafka",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka",
+        "description": "wkafka",
+        "isExtraImport": true,
+        "detail": "wkafka",
+        "documentation": {}
+    },
+    {
+        "label": "cv2",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "cv2",
+        "description": "cv2",
+        "detail": "cv2",
+        "documentation": {}
+    },
+    {
+        "label": "dataclass",
+        "importPath": "dataclasses",
+        "description": "dataclasses",
+        "isExtraImport": true,
+        "detail": "dataclasses",
+        "documentation": {}
+    },
+    {
+        "label": "KafkaConsumer",
+        "importPath": "kafka",
+        "description": "kafka",
+        "isExtraImport": true,
+        "detail": "kafka",
+        "documentation": {}
+    },
+    {
+        "label": "KafkaProducer",
+        "importPath": "kafka",
+        "description": "kafka",
+        "isExtraImport": true,
+        "detail": "kafka",
+        "documentation": {}
+    },
+    {
+        "label": "errors",
+        "importPath": "kafka",
+        "description": "kafka",
+        "isExtraImport": true,
+        "detail": "kafka",
+        "documentation": {}
+    },
+    {
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "logging",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "logging",
+        "description": "logging",
+        "detail": "logging",
+        "documentation": {}
+    },
+    {
+        "label": "uuid",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "uuid",
+        "description": "uuid",
+        "detail": "uuid",
+        "documentation": {}
+    },
+    {
+        "label": "wraps",
+        "importPath": "functools",
+        "description": "functools",
+        "isExtraImport": true,
+        "detail": "functools",
+        "documentation": {}
+    },
+    {
+        "label": "Callable",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
+        "label": "Microservice",
+        "kind": 6,
+        "importPath": "microservice",
+        "description": "microservice",
+        "peekOfCode": "class Microservice:\n    complete_steps = False\n    def __init__(self, config_file: str = \"config.yaml\"):\n        # Read the configuration\n        self.config_file = config_file\n        self._update_config()\n        self.config = leer_yaml(config_file)\n        # Configure attributes\n        self.worker_id_file = self.config.get(\"worker_id_file\", \"worker_id.yaml\")\n        self.kafka_server = self.config.get(\"kafka_server\", \"192.168.1.60:9092\")",
+        "detail": "microservice",
+        "documentation": {}
+    },
+    {
+        "label": "Auto_respond",
+        "kind": 6,
+        "importPath": "microservice",
+        "description": "microservice",
+        "peekOfCode": "class Auto_respond:\n    _results: dict = None\n    _errors: dict = None\n    microservice: Microservice = None\n    config_path: str = None\n    def __init__(self, microservice: Microservice, data: Consumer_data = None) -> None:\n        self.microservice = microservice\n        self.data = data\n    def run(self, args_dict: dict):\n        return self._run(args_dict)",
+        "detail": "microservice",
+        "documentation": {}
+    },
+    {
+        "label": "process_message",
+        "kind": 2,
+        "importPath": "read_respond",
+        "description": "read_respond",
+        "peekOfCode": "def process_message(data: Consumer_data):\n    header = data.header\n    value = data.value\n    print(f\"Mensaje recibido: {value}\")\n# @kafka_instance.consumer(\n#     topic=\"read_respond\",\n#     value_type=\"image\",\n#     key=\"clave1\",\n# )\n# def stream_video(data: Consumer_data):",
+        "detail": "read_respond",
+        "documentation": {}
+    },
+    {
+        "label": "kafka_instance",
+        "kind": 5,
+        "importPath": "read_respond",
+        "description": "read_respond",
+        "peekOfCode": "kafka_instance = Wkafka(server=\"192.168.1.137:9092\", name=\"read_respond\")\n@kafka_instance.consumer(\n    topic=\"read_respond\",\n    value_type=\"json\",\n    key=\"clave1\",\n)\ndef process_message(data: Consumer_data):\n    header = data.header\n    value = data.value\n    print(f\"Mensaje recibido: {value}\")",
+        "detail": "read_respond",
+        "documentation": {}
+    },
+    {
+        "label": "kafka_instance",
+        "kind": 5,
+        "importPath": "send_to_docker",
+        "description": "send_to_docker",
+        "peekOfCode": "kafka_instance = Wkafka(server=\"192.168.1.137:9092\")\nwith kafka_instance.producer() as producer:\n    producer.send(\n        topic=\"read_respond\",\n        value={\"mensaje\": \"Hola Kafka!\"},\n        key=\"clave1\",\n        value_type=\"json\",\n        header={\"response_to\": \"send_to_docker\", \"id_db\": \"abcd_1234\"},\n    )\n# image = cv2.imread(\"dog.jpg\")",
+        "detail": "send_to_docker",
+        "documentation": {}
+    },
+    {
+        "label": "Consumer_data",
+        "kind": 6,
+        "importPath": "wkafka",
+        "description": "wkafka",
+        "peekOfCode": "class Consumer_data:\n    value: bytes = None\n    key: str = None\n    topic: str = None\n    group_id: str = None\n    header: str = None\n    offset: int = None\nclass Wkafka:\n    \"\"\"\n    A class that manages Kafka producers and consumers with a decorator-based approach",
+        "detail": "wkafka",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "kind": 6,
+        "importPath": "wkafka",
+        "description": "wkafka",
+        "peekOfCode": "class Wkafka:\n    \"\"\"\n    A class that manages Kafka producers and consumers with a decorator-based approach\n    for easy message processing and sending.\n    \"\"\"\n    type_formats = [\"json\", \"file\", \"image\"]\n    is_producer = False\n    def __init__(self, server: str, name: str = None):\n        \"\"\"\n        Initialize the CustomKafka class with the server address.",
+        "detail": "wkafka",
+        "documentation": {}
+    }
+]

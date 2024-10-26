@@ -1,6 +1,6 @@
 import cv2
 from tqdm import tqdm
-from wkafka2.controller.wkafka import Wkafka
+from wkafka.controller import Wkafka
 
 
 kafka_instance = Wkafka(server="192.168.1.60:9092")
@@ -44,13 +44,7 @@ with kafka_instance.producer() as producer:
             value=im0,
             key="image",
             value_type="image",
-            headers={
-                "status": True,
-                "value": 12345,
-                "correlation_id": "12345",
-                "source": "service_A",
-                "destination": "service_B",
-                "content_type": "image/jpeg",
+            header={
                 "frame_width": frame_width,
                 "frame_height": frame_height,
                 "total_frames": total_frames,

@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="wkafka",  # El nombre de tu paquete
-    version="0.1.1",  # La versión de tu paquete
+    version="0.1.3",  # La versión de tu paquete
     description="Libreria para usar facilmente kafka en diversos proyectos",
     author="William Steve Rodriguez Villamizar",
     author_email="wisrovi.rodriguez@gmail.com",
@@ -23,7 +23,7 @@ setup(
         'Topic :: Software Development :: Build Tools',
         'Intended Audience :: Developers',
     ],
-    python_requires=">=3.6",  # Requiere Python 3.6 o superior
+    python_requires=">=3.6, <3.10",  # Requiere Python >=3.6 y <3.10
     long_description_content_type="text/markdown",
     long_description=long_description,
     license='MIT',    

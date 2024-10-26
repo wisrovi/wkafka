@@ -1,0 +1,183 @@
+[
+    {
+        "label": "io",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "io",
+        "description": "io",
+        "detail": "io",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "Image",
+        "importPath": "PIL",
+        "description": "PIL",
+        "isExtraImport": true,
+        "detail": "PIL",
+        "documentation": {}
+    },
+    {
+        "label": "cv2",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "cv2",
+        "description": "cv2",
+        "detail": "cv2",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka.controller.wkafka",
+        "description": "wkafka.controller.wkafka",
+        "isExtraImport": true,
+        "detail": "wkafka.controller.wkafka",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka_o.controller.wkafka",
+        "description": "wkafka_o.controller.wkafka",
+        "isExtraImport": true,
+        "detail": "wkafka_o.controller.wkafka",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka.controller",
+        "description": "wkafka.controller",
+        "isExtraImport": true,
+        "detail": "wkafka.controller",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka.controller",
+        "description": "wkafka.controller",
+        "isExtraImport": true,
+        "detail": "wkafka.controller",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka_o.controller",
+        "description": "wkafka_o.controller",
+        "isExtraImport": true,
+        "detail": "wkafka_o.controller",
+        "documentation": {}
+    },
+    {
+        "label": "Wkafka",
+        "importPath": "wkafka_o.controller",
+        "description": "wkafka_o.controller",
+        "isExtraImport": true,
+        "detail": "wkafka_o.controller",
+        "documentation": {}
+    },
+    {
+        "label": "tqdm",
+        "importPath": "tqdm",
+        "description": "tqdm",
+        "isExtraImport": true,
+        "detail": "tqdm",
+        "documentation": {}
+    },
+    {
+        "label": "process_message3",
+        "kind": 2,
+        "importPath": "consumer",
+        "description": "consumer",
+        "peekOfCode": "def process_message3(message):\n    cv2.imwrite(\"demo.jpg\", message.value)\n    print(\n        f\"Message received 3: {message.value.shape}, key: {message.key}, headers: {message.header}\"\n    )\n# @kf.consumer(\n#     topic=\"sms\",\n#     group_id=f\"D{random.randint(1, 100)}\",\n#     key_filter=\"image\",\n#     value_convert_to=\"file\",",
+        "detail": "consumer",
+        "documentation": {}
+    },
+    {
+        "label": "kf",
+        "kind": 5,
+        "importPath": "consumer",
+        "description": "consumer",
+        "peekOfCode": "kf = Wkafka(server=\"localhost:9092\")\n# @kf.consumer(\n#     topic=\"sms\",\n#     group_id=f\"A{random.randint(1, 100)}\",\n#     key_filter=\"csv\",\n#     value_convert_to=\"json\",\n# )\n# def process_message(message):\n#     print(f\"Message received: {message.value}, key: {message.key}\")\n# @kf.consumer(",
+        "detail": "consumer",
+        "documentation": {}
+    },
+    {
+        "label": "kf",
+        "kind": 5,
+        "importPath": "producer",
+        "description": "producer",
+        "peekOfCode": "kf = Wkafka(server=\"localhost:9092\")\n# Ejemplo de uso con 'with' y el método producer()\nwith kf.producer() as kf_producer:\n    # Enviar un mensaje\n    # kf_producer.send(topic=\"sms\", value={\"name\": \"John\"}, key=\"csv\", value_type=\"json\")\n    # kf_producer.send(topic=\"sms\", value={\"name\": \"Juan\"}, key=\"csv\", value_type=\"json\")\n    # kf_producer.send(topic=\"sms\", value=\"dog.jpg\", key=\"image\", value_type=\"file\")\n    image = cv2.imread(\"dog.jpg\")\n    kf_producer.send(\n        topic=\"sms\",",
+        "detail": "producer",
+        "documentation": {}
+    },
+    {
+        "label": "process_message",
+        "kind": 2,
+        "importPath": "receive",
+        "description": "receive",
+        "peekOfCode": "def process_message(data):\n    print(f\"Mensaje recibido: {data.value}, con clave: {data.key}\")\n@kafka_instance.consumer(topic=\"image\", value_convert_to=\"image\")\ndef stream_video(data):\n    DREAM = 600\n    im0 = data.value\n    cv2.imwrite(\"demo.jpg\", im0)\n    print(\n        f\"Message received 3: {data.value.shape}, key: {data.key}, headers: {data.header}\"\n    )",
+        "detail": "receive",
+        "documentation": {}
+    },
+    {
+        "label": "stream_video",
+        "kind": 2,
+        "importPath": "receive",
+        "description": "receive",
+        "peekOfCode": "def stream_video(data):\n    DREAM = 600\n    im0 = data.value\n    cv2.imwrite(\"demo.jpg\", im0)\n    print(\n        f\"Message received 3: {data.value.shape}, key: {data.key}, headers: {data.header}\"\n    )\n@kafka_instance.consumer(topic=\"video_topic\", value_convert_to=\"image\")\ndef stream_video(data):\n    DREAM_WIDTH = 600",
+        "detail": "receive",
+        "documentation": {}
+    },
+    {
+        "label": "stream_video",
+        "kind": 2,
+        "importPath": "receive",
+        "description": "receive",
+        "peekOfCode": "def stream_video(data):\n    DREAM_WIDTH = 600\n    im0 = data.value\n    header = data.header\n    frame_width = header.get(\"frame_width\")\n    frame_height = header.get(\"frame_height\")\n    new_size = DREAM_WIDTH / frame_width\n    im0 = cv2.resize(im0, (int(frame_width * new_size), int(frame_height * new_size)))\n    # Process each video frame as an image\n    cv2.imshow(\"Video Received\", im0)",
+        "detail": "receive",
+        "documentation": {}
+    },
+    {
+        "label": "kafka_instance",
+        "kind": 5,
+        "importPath": "receive",
+        "description": "receive",
+        "peekOfCode": "kafka_instance = Wkafka(server=\"192.168.1.137:9092\", name=\"video_show\")\n@kafka_instance.consumer(\n    topic=\"mi_tema\",\n    value_convert_to=\"json\",\n)\ndef process_message(data):\n    print(f\"Mensaje recibido: {data.value}, con clave: {data.key}\")\n@kafka_instance.consumer(topic=\"image\", value_convert_to=\"image\")\ndef stream_video(data):\n    DREAM = 600",
+        "detail": "receive",
+        "documentation": {}
+    },
+    {
+        "label": "kafka_instance",
+        "kind": 5,
+        "importPath": "send_image",
+        "description": "send_image",
+        "peekOfCode": "kafka_instance = Wkafka(server=\"192.168.1.60:9092\")\nwith kafka_instance.producer() as kf_producer:\n    # Enviar un mensaje\n    # kf_producer.send(topic=\"sms\", value={\"name\": \"John\"}, key=\"csv\", value_type=\"json\")\n    # kf_producer.send(topic=\"sms\", value={\"name\": \"Juan\"}, key=\"csv\", value_type=\"json\")\n    # kf_producer.send(topic=\"sms\", value=\"dog.jpg\", key=\"image\", value_type=\"file\")\n    image = cv2.imread(\"dog.jpg\")\n    frame_height, frame_width, _ = image.shape\n    kf_producer.send(\n        topic=\"image\",",
+        "detail": "send_image",
+        "documentation": {}
+    },
+    {
+        "label": "kafka_instance",
+        "kind": 5,
+        "importPath": "send_json",
+        "description": "send_json",
+        "peekOfCode": "kafka_instance = Wkafka(server=\"192.168.1.137:9092\")\nwith kafka_instance.producer() as producer:\n    producer.send(\n        topic=\"mi_tema\",\n        value={\"mensaje\": \"Hola Kafka!\"},\n        key=\"clave1\",\n        value_type=\"json\"\n    )",
+        "detail": "send_json",
+        "documentation": {}
+    },
+    {
+        "label": "kafka_instance",
+        "kind": 5,
+        "importPath": "send_video",
+        "description": "send_video",
+        "peekOfCode": "kafka_instance = Wkafka(server=\"192.168.1.60:9092\")\nwith kafka_instance.producer() as producer:\n    video_capture = cv2.VideoCapture(f\"../../data/videos/statistics/0007.mp4\")\n    assert video_capture.isOpened(), \"Error reading video file\"\n    # read metadata of video\n    frame_width, frame_height, total_frames, fps = [\n        int(video_capture.get(value))\n        for value in [\n            cv2.CAP_PROP_FRAME_WIDTH,\n            cv2.CAP_PROP_FRAME_HEIGHT,",
+        "detail": "send_video",
+        "documentation": {}
+    }
+]

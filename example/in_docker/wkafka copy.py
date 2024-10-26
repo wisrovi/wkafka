@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import threading
-import time
 import cv2
 from kafka import KafkaConsumer, KafkaProducer, errors
 import json
@@ -33,13 +32,7 @@ class Wkafka:
 
     is_producer = False
 
-    def __init__(
-        self,
-        server: str,
-        name: str = None,
-        retry_delay: int = 10,
-        max_retries: int = 3,
-    ):
+    def __init__(self, server: str, name: str = None):
         """
         Initialize the CustomKafka class with the server address.
 
@@ -49,9 +42,6 @@ class Wkafka:
 
         self.server = server
         self.name = name
-
-        self.retry_delay = retry_delay
-        self.max_retries = max_retries
 
         self.consumers = []
 
@@ -133,7 +123,7 @@ class Wkafka:
                     raise Exception("NoBrokersAvailable")
                 except Exception as e:
                     raise Exception("Problem with conection")
-
+                
                 self.consumers.append((consumer, func, key, value_type))
 
             create_consumer()
@@ -220,7 +210,7 @@ class Wkafka:
 
         for thread in threads:
             thread.start()
-
+            
         logging.info("kafka consumers ready to receive data!")
 
         for thread in threads:
@@ -249,7 +239,7 @@ class Wkafka:
         Returns:
             KafkaProducer: The configured Kafka producer instance.
         """
-
+        
         try:
             return KafkaProducer(
                 bootstrap_servers=self.server,
@@ -279,12 +269,12 @@ class Wkafka:
         value: dict,
         key: Optional[str] = None,
         value_type: Optional[str] = None,
-        header: Optional[dict] = None,
+        headers: Optional[dict] = None,
         verbose: bool = False,
     ):
         thread = threading.Thread(
             target=self.send,
-            args=(topic, value, key, value_type, header, verbose),
+            args=(topic, value, key, value_type, headers, verbose),
             name=f"Consumer-{str(uuid.uuid4())}",
         )
         thread.start()
@@ -344,25 +334,13 @@ class Wkafka:
                 if self.name:
                     header.append(("name", self.name))
 
-            for attempt in range(self.max_retries):
-                try:
-                    future = self.producer_instance.send(
-                        topic,
-                        value=value,
-                        key=key.encode("utf-8") if key else None,
-                        headers=header,
-                    )
-                    self.producer_instance.flush()  # Force immediate sending
-
-                    if verbose:
-                        logging.info(f"Message sent: {future.get(timeout=10)}")
-                    break
-                except errors.KafkaTimeoutError:
-                    logging.error("Kafka timeout, retrying...")
-                    time.sleep(self.retry_delay)
-                except Exception as e:
-                    logging.error(f"Producer error: {e}")
-                    time.sleep(self.retry_delay)
+            self.producer_instance.send(
+                topic,
+                value=value,
+                key=key.encode("utf-8") if key else None,
+                headers=header,
+            )
+            self.producer_instance.flush()  # Force immediate sending
 
             if verbose:
                 print(f"Message sent to topic '{topic}': {value}, key: {key}")
