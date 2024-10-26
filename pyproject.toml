@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wkafka"
-version = "0.1.1"
+version = "0.1.8"
 authors = [
     { name="wisrovi", email="wisrovi.rodriguez@gmail.com" },
 ]
 description = "Pipeline con API"
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.9"
+requires-python = ">=3.6"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

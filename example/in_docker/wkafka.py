@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-import os
 import threading
 import time
 import cv2
@@ -128,19 +127,14 @@ class Wkafka:
                     base_config.update(other_config)
 
                 try:
-                    real_topic = topic
-                    if os.environ.get("wkafka_pytest", False):
-                        real_topic = f"pytest.{topic}"
-                        logging.debug("Mode test activate!")
-
-                    consumer = KafkaConsumer(real_topic, **base_config)
+                    consumer = KafkaConsumer(topic, **base_config)
                 except errors.NoBrokersAvailable:
                     logging.error("NoBrokersAvailable")
                     raise Exception("NoBrokersAvailable")
                 except Exception as e:
                     raise Exception("Problem with conection")
 
-                self.consumers.append((consumer, func, key, value_type, real_topic))
+                self.consumers.append((consumer, func, key, value_type))
 
             create_consumer()
 
@@ -208,14 +202,14 @@ class Wkafka:
                 ):
                     break
 
-    def run_consumers(self, join: bool = True) -> None:
+    def run_consumers(self) -> None:
         """
         Start all registered Kafka consumers in separate threads.
         """
 
         threads = []
 
-        for consumer, process_func, key_filter, auto_value, real_topic in self.consumers:
+        for consumer, process_func, key_filter, auto_value in self.consumers:
             thread = threading.Thread(
                 target=self.__async_receiver,
                 args=(consumer, process_func, key_filter, auto_value),
@@ -224,14 +218,13 @@ class Wkafka:
 
             threads.append(thread)
 
-        logging.info("kafka consumers ready to receive data!")
-
         for thread in threads:
             thread.start()
 
-        if join:
-            for thread in threads:
-                thread.join()
+        logging.info("kafka consumers ready to receive data!")
+
+        for thread in threads:
+            thread.join()
 
     """
     Producer Section
@@ -286,12 +279,12 @@ class Wkafka:
         value: dict,
         key: Optional[str] = None,
         value_type: Optional[str] = None,
-        header: Optional[dict] = None,
+        headers: Optional[dict] = None,
         verbose: bool = False,
     ):
         thread = threading.Thread(
             target=self.send,
-            args=(topic, value, key, value_type, header, verbose),
+            args=(topic, value, key, value_type, headers, verbose),
             name=f"Consumer-{str(uuid.uuid4())}",
         )
         thread.start()

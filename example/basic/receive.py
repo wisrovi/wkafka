@@ -1,8 +1,8 @@
 import cv2
-from wkafka2.controller.wkafka import Wkafka
+from wkafka.controller import Wkafka
 
 
-kafka_instance = Wkafka(server="192.168.1.60:9092", name="video_show")
+kafka_instance = Wkafka(server="192.168.1.137:9092", name="video_show")
 
 
 @kafka_instance.consumer(
