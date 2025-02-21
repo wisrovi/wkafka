@@ -1,0 +1,7 @@
+loguru
+toml
+setuptools
+
+opencv-python
+kafka-python
+rich

@@ -1,3 +1,5 @@
+import PIL
+from PIL import Image
 from dataclasses import dataclass
 import os
 import threading
@@ -36,10 +38,11 @@ class Wkafka:
 
     def __init__(
         self,
-        server: str,
+        server: str | list,
         name: str = None,
         retry_delay: int = 10,
         max_retries: int = 3,
+        dynamic_group_id: bool = False,
     ):
         """
         Initialize the CustomKafka class with the server address.
@@ -54,6 +57,8 @@ class Wkafka:
         self.retry_delay = retry_delay
         self.max_retries = max_retries
 
+        self.dynamic_group_id = dynamic_group_id
+
         self.consumers = []
 
     def _random_group_id(self) -> str:
@@ -63,7 +68,8 @@ class Wkafka:
         Returns:
             str: A random group ID.
         """
-        return f"{str(uuid.uuid4())}-{str(random.randint(1, 100))}"
+        if self.dynamic_group_id:
+            return f"{str(uuid.uuid4())}-{str(random.randint(1, 100))}"
 
     """
     Consumer Section
@@ -114,14 +120,24 @@ class Wkafka:
 
             def create_consumer():
                 # Create a new consumer with a specified or random group ID
-                new_group_id = group_id or self._random_group_id()
+                # and register the processing function
+                if group_id:
+                    new_group_id = group_id
+                else:
+                    new_group_id = self._random_group_id() or key or "default"
+
+                if isinstance(self.server, str):
+                    self.server = [self.server]
 
                 base_config = dict(
-                    bootstrap_servers=self.server,
                     auto_offset_reset="latest",
-                    value_deserializer=lambda x: x,
-                    key_deserializer=lambda key: key.decode("utf-8") if key else None,
+                    bootstrap_servers=self.server,
+                    enable_auto_commit=True,  # Reduce latencia al confirmar offsets automáticamente
+                    fetch_max_bytes=52428800,  # Permite recuperar lotes más grandes (50MB)
                     group_id=new_group_id,
+                    key_deserializer=lambda key: key.decode("utf-8") if key else None,
+                    max_partition_fetch_bytes=10485760,  # Ajusta el tamaño de cada partición
+                    value_deserializer=lambda x: x,
                 )
 
                 if other_config:
@@ -191,10 +207,13 @@ class Wkafka:
                         pass
                 elif auto_value == "image":
                     try:
+                        # 🔥 Decodifica más eficientemente
                         np_arr = np.frombuffer(data.value, np.uint8)
-                        data.value = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-                    except:
-                        pass
+                        data.value = cv2.imdecode(
+                            np_arr, cv2.IMREAD_COLOR
+                        )  # IMREAD_UNCHANGED si usas PNG o WebP
+                    except Exception as e:
+                        print(f"Error en decodificación de imagen: {e}")
 
                 results = process_func(data)
 
@@ -215,7 +234,13 @@ class Wkafka:
 
         threads = []
 
-        for consumer, process_func, key_filter, auto_value, real_topic in self.consumers:
+        for (
+            consumer,
+            process_func,
+            key_filter,
+            auto_value,
+            real_topic,
+        ) in self.consumers:
             thread = threading.Thread(
                 target=self.__async_receiver,
                 args=(consumer, process_func, key_filter, auto_value),
@@ -258,10 +283,18 @@ class Wkafka:
         """
 
         try:
+            if isinstance(self.server, str):
+                self.server = [self.server]
+
             return KafkaProducer(
+                acks=1,  # Minimiza la latencia asegurando que solo un broker confirme la escritura
+                batch_size=65536,  # Aumenta el tamaño de los lotes (por defecto es 16KB, aquí lo subimos a 64KB)
                 bootstrap_servers=self.server,
-                value_serializer=lambda v: v,
+                buffer_memory=33554432,  # Aumenta el buffer del productor (32MB)
+                compression_type="snappy",  # Usa compresión rápida para reducir tamaño de mensajes
                 key_serializer=lambda k: k.encode("utf-8") if isinstance(k, str) else k,
+                linger_ms=5,  # Reduce el tiempo de espera antes de enviar lotes
+                value_serializer=lambda v: v,
             )
         except errors.NoBrokersAvailable:
             logging.error("NoBrokersAvailable")
@@ -303,6 +336,7 @@ class Wkafka:
         key: Optional[str] = None,
         value_type: Optional[str] = None,
         header: Optional[dict] = None,
+        quality: int = 80,
         verbose: bool = False,
     ) -> None:
         """
@@ -310,8 +344,12 @@ class Wkafka:
 
         Args:
             topic (str): The Kafka topic to send the message to.
-            value (dict): The message payload to send.
-            key (Optional[str], optional): The key for the message. Defaults to None.
+            value (dict): The message value to send.
+            key (Optional[str], optional): The message key. Defaults to None.
+            value_type (Optional[str], optional): The type of value to send. Defaults to None.
+            header (Optional[dict], optional): Additional headers to send. Defaults to None.
+            quality (int, optional): The quality of the image (0-100) if value_type is "image". Defaults to 80.
+            verbose (bool, optional): Whether to print debug messages. Defaults to False.
         """
 
         if not hasattr(self, "is_producer"):
@@ -336,12 +374,51 @@ class Wkafka:
                 with open(value, "rb") as f:
                     value = f.read()
             elif value_type == "image":
-                frame_height, frame_width, _ = value.shape
+                if isinstance(value, Image.Image):
+                    # 🔥 Manejo seguro de imágenes PIL (Pillow)
+                    extra_headers["frame_width"], extra_headers["frame_height"] = (
+                        value.size
+                    )  # `.size` devuelve (width, height)
 
-                extra_headers["frame_width"] = frame_width
-                extra_headers["frame_height"] = frame_height
+                elif isinstance(value, np.ndarray):
+                    # 🔥 Verifica que sea una imagen válida de OpenCV
+                    if (
+                        value.ndim == 2
+                    ):  # Imagen en escala de grises (sin canal de color)
+                        extra_headers["frame_width"], extra_headers["frame_height"] = (
+                            value.shape[1],
+                            value.shape[0],
+                        )
+                        extra_headers["channels"] = 1  # Indicar que es escala de grises
 
-                _, buffer = cv2.imencode(".jpg", value)
+                    elif value.ndim == 3 and value.shape[2] in [1, 3, 4]:
+                        # Imagen a color (BGR/RGB o con canal alfa)
+                        (
+                            extra_headers["frame_width"],
+                            extra_headers["frame_height"],
+                            extra_headers["channels"],
+                        ) = (value.shape[1], value.shape[0], value.shape[2])
+
+                    else:
+                        raise ValueError(
+                            f"Formato de imagen OpenCV no válido: dimensiones {value.shape}"
+                        )
+
+                else:
+                    raise TypeError(f"Tipo de dato no soportado: {type(value)}")
+
+                if quality is not None and not (30 <= quality <= 100):
+                    raise ValueError("Quality must be an integer between 30 and 100.")
+
+                if quality is None or quality == 100:
+                    # 🔥 Codifica la imagen sin compresión
+                    _, buffer = cv2.imencode(".jpg", value)
+                else:
+                    # 🔥 Codifica la imagen con compresión optimizada
+                    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+                    _, buffer = cv2.imencode(".jpg", value, encode_param)
+
+                # 🔥 Envía los metadatos y la imagen comprimida
                 value = buffer.tobytes()
 
             if header:
