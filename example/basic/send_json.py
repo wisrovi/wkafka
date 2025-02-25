@@ -10,5 +10,5 @@ with kafka_instance.producer() as producer:
         value={"mensaje": "Hola Kafka!"},
         key="clave1",
         value_type="json",
-        header={"response_to": "send_to_docker", "id_db": "abcd_1234"},
+        headers={"response_to": "send_to_docker", "id_db": "abcd_1234"},
     )

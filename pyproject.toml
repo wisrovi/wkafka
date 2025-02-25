@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wkafka"
-version = "0.1.9"
+version = "0.2.0"
 authors = [
     { name="wisrovi", email="wisrovi.rodriguez@gmail.com" },
 ]
@@ -17,6 +17,21 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+
+
+[project.dependencies]
+loguru = "*"
+toml = "*"
+setuptools = "*"
+opencv-python = "*"
+kafka-python = "*"
+rich = "*"
+loguru = "*"
+requests = "*"
+numpy = "*"
+pillow = "*"
+python-snappy = "*"
+
 
 [project.urls]
 "Homepage" = "https://github.com/wisrovi/wkafka"

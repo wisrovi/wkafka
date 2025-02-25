@@ -6,7 +6,7 @@ from wkafka.controller.wkafka import Wkafka
 
 # Ejemplo de uso
 kf = Wkafka(server="localhost:9092")
-kf = Wkafka(server="192.168.1.137:9092")
+# kf = Wkafka(server="192.168.1.137:9092")
 
 
 # @kf.consumer(
@@ -24,9 +24,9 @@ kf = Wkafka(server="192.168.1.137:9092")
 
 
 @kf.consumer(
-    topic="send_to_docker",
+    topic="sms",
     # group_id=f"A{random.randint(1, 100)}",
-    # key="csv",
+    key="csv",
     value_type="json",
     other_config=dict(
         auto_offset_reset="earliest",
@@ -51,23 +51,23 @@ def process_message(data):
 #     print(f"Message received 2: {message.value}, key: {message.key}")
 
 
-# @kf.consumer(
-#     topic="sms",
-#     group_id=f"C{random.randint(1, 100)}",
-#     key="image",
-#     value_type="image",
-#     other_config=dict(
-#         auto_offset_reset="earliest",
-#         enable_auto_commit=False,
-#     ),
-# )
-# def process_message3(message):
+@kf.consumer(
+    topic="sms",
+    group_id=f"C{random.randint(1, 100)}",
+    key="image",
+    value_type="image",
+    other_config=dict(
+        auto_offset_reset="earliest",
+        enable_auto_commit=False,
+    ),
+)
+def process_message3(message):
 
-#     cv2.imwrite("demo.jpg", message.value)
+    cv2.imwrite("demo.jpg", message.value)
 
-#     print(
-#         f"Message received 3: {message.value.shape}, key: {message.key}, headers: {message.header}"
-#     )
+    # print(
+    #     f"Message received 3: {message.value.shape}, key: {message.key}, headers: {message.header}"
+    # )
 
 
 # @kf.consumer(

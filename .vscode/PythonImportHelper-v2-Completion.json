@@ -313,7 +313,23 @@
         "documentation": {}
     },
     {
+        "label": "Any",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
         "label": "Callable",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Dict",
         "importPath": "typing",
         "description": "typing",
         "isExtraImport": true,
@@ -508,6 +524,23 @@
         "documentation": {}
     },
     {
+        "label": "concurrent",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "concurrent",
+        "description": "concurrent",
+        "detail": "concurrent",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "importPath": "loguru",
+        "description": "loguru",
+        "isExtraImport": true,
+        "detail": "loguru",
+        "documentation": {}
+    },
+    {
         "label": "subprocess",
         "kind": 6,
         "isExtraImport": true,
@@ -577,11 +610,11 @@
         "documentation": {}
     },
     {
-        "label": "kf",
-        "kind": 5,
+        "label": "process_message3",
+        "kind": 2,
         "importPath": "example.basic.consumer",
         "description": "example.basic.consumer",
-        "peekOfCode": "kf = Wkafka(server=\"localhost:9092\")\nkf = Wkafka(server=\"192.168.1.137:9092\")\n# @kf.consumer(\n#     topic=\"sms\",\n#     # group_id=f\"A{random.randint(1, 100)}\",\n#     # key=\"csv\",\n#     value_type=\"json\",\n#     other_config=dict(\n#         auto_offset_reset=\"earliest\",\n#         enable_auto_commit=False,",
+        "peekOfCode": "def process_message3(message):\n    cv2.imwrite(\"demo.jpg\", message.value)\n    # print(\n    #     f\"Message received 3: {message.value.shape}, key: {message.key}, headers: {message.header}\"\n    # )\n# @kf.consumer(\n#     topic=\"sms\",\n#     group_id=f\"D{random.randint(1, 100)}\",\n#     key=\"image\",\n#     value_type=\"file\",",
         "detail": "example.basic.consumer",
         "documentation": {}
     },
@@ -590,7 +623,7 @@
         "kind": 5,
         "importPath": "example.basic.consumer",
         "description": "example.basic.consumer",
-        "peekOfCode": "kf = Wkafka(server=\"192.168.1.137:9092\")\n# @kf.consumer(\n#     topic=\"sms\",\n#     # group_id=f\"A{random.randint(1, 100)}\",\n#     # key=\"csv\",\n#     value_type=\"json\",\n#     other_config=dict(\n#         auto_offset_reset=\"earliest\",\n#         enable_auto_commit=False,\n#     ),",
+        "peekOfCode": "kf = Wkafka(server=\"localhost:9092\")\n# kf = Wkafka(server=\"192.168.1.137:9092\")\n# @kf.consumer(\n#     topic=\"sms\",\n#     # group_id=f\"A{random.randint(1, 100)}\",\n#     # key=\"csv\",\n#     value_type=\"json\",\n#     other_config=dict(\n#         auto_offset_reset=\"earliest\",\n#         enable_auto_commit=False,",
         "detail": "example.basic.consumer",
         "documentation": {}
     },
@@ -599,7 +632,7 @@
         "kind": 5,
         "importPath": "example.basic.producer",
         "description": "example.basic.producer",
-        "peekOfCode": "kf = Wkafka(server=\"localhost:9092\")\n# Ejemplo de uso con 'with' y el método producer()\nwith kf.producer() as kf_producer:\n    # Enviar un mensaje\n    # kf_producer.send(topic=\"sms\", value={\"name\": \"John\"}, key=\"csv\", value_type=\"json\")\n    # kf_producer.send(topic=\"sms\", value={\"name\": \"Juan\"}, key=\"csv\", value_type=\"json\")\n    # kf_producer.send(topic=\"sms\", value=\"dog.jpg\", key=\"image\", value_type=\"file\")\n    image = cv2.imread(\"dog.jpg\")\n    kf_producer.send(\n        topic=\"sms\",",
+        "peekOfCode": "kf = Wkafka(server=\"localhost:9092\")\n# Ejemplo de uso con 'with' y el método producer()\nwith kf.producer() as kf_producer:\n    # Enviar un mensaje\n    # kf_producer.send(topic=\"sms\", value={\"name\": \"John\"}, key=\"csv\", value_type=\"json\")\n    kf_producer.send(\n        topic=\"sms\",\n        value={\"name\": \"Juan\"},\n        key=\"csv\",\n        value_type=\"json\",",
         "detail": "example.basic.producer",
         "documentation": {}
     },
@@ -653,7 +686,7 @@
         "kind": 5,
         "importPath": "example.basic.send_json",
         "description": "example.basic.send_json",
-        "peekOfCode": "kafka_instance = Wkafka(server=\"192.168.1.137:9092\")\nwith kafka_instance.producer() as producer:\n    producer.send(\n        topic=\"sms\",\n        value={\"mensaje\": \"Hola Kafka!\"},\n        key=\"clave1\",\n        value_type=\"json\",\n        header={\"response_to\": \"send_to_docker\", \"id_db\": \"abcd_1234\"},\n    )",
+        "peekOfCode": "kafka_instance = Wkafka(server=\"192.168.1.137:9092\")\nwith kafka_instance.producer() as producer:\n    producer.send(\n        topic=\"sms\",\n        value={\"mensaje\": \"Hola Kafka!\"},\n        key=\"clave1\",\n        value_type=\"json\",\n        headers={\"response_to\": \"send_to_docker\", \"id_db\": \"abcd_1234\"},\n    )",
         "detail": "example.basic.send_json",
         "documentation": {}
     },
@@ -779,7 +812,7 @@
         "kind": 6,
         "importPath": "wkafka.controller.wkafka",
         "description": "wkafka.controller.wkafka",
-        "peekOfCode": "class Consumer_data:\n    value: bytes = None\n    key: str = None\n    topic: str = None\n    group_id: str = None\n    header: str = None\n    offset: int = None\nclass Wkafka:\n    \"\"\"\n    A class that manages Kafka producers and consumers with a decorator-based approach",
+        "peekOfCode": "class Consumer_data:\n    \"\"\"\n    A dataclass to store consumer message data.\n    \"\"\"\n    value: bytes = None\n    key: str = None\n    topic: str = None\n    group_id: str = None\n    header: Optional[dict] = None\n    offset: int = None",
         "detail": "wkafka.controller.wkafka",
         "documentation": {}
     },

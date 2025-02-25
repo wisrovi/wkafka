@@ -17,13 +17,20 @@ Wkafka es una clase que facilita la gestión de productores y consumidores de Ka
 
 ## Requerimientos
 
-- Python 3.7 o superior
+- Python 3.7 y menor o igual a 3.10
 
   - Dependencias:
 
     - kafka-python
     - opencv-python
     - numpy
+    - Pillow
+    - json
+    - base64
+    - pyyaml
+    - python-snappy
+    - confluent-kafka
+    - opencv-python
 
 ## Instalación
 
@@ -604,7 +611,7 @@ from wkafka.controller import Wkafka
 kafka_client = Wkafka(server="localhost:9092", name="RT_features")
 
 @kafka_client.consumer(
-    topic="feature_engineering", 
+    topic="feature_engineering",
     value_type="json",
 )
 def generate_features(data):
@@ -676,7 +683,7 @@ model_3 = ...
 kafka_client = Wkafka(server="localhost:9092", name="TextBlob")
 
 @kafka_client.consumer(
-    topic="complex_inference", 
+    topic="complex_inference",
     value_type="json",
 )
 def orchestrate_models(data):
@@ -773,6 +780,56 @@ Explicación
 
 Este enfoque simplificado permite la actualización y el uso de modelos en producción de manera eficiente y con un mínimo de código.
 
+## Nuevas Funcionalidades Agregadas
+
+1. Soporte para Mensajes en Batch
+
+   Ahora puedes enviar múltiples mensajes en un solo batch para mejorar el rendimiento.
+   Métodos: send_batch y async_send_batch.
+
+2. Serialización y Deserialización en Múltiples Formatos
+
+   Admite serialización/deserialización en JSON, YAML y otros formatos personalizables.
+   Ejemplo:
+   python
+
+   ```python
+   kafka.send(
+       topic="example_topic",
+       value={"key": "value"},
+       value_type="yaml"
+   )
+   ```
+
+3. Monitorización con Prometheus
+
+   Habilita métricas opcionales para monitorear el número de mensajes enviados y recibidos.
+   Activación:
+
+   ```python
+   kafka = Wkafka(server="localhost:9092", enable_metrics=True)
+   ```
+
+4. Configuración Dinámica
+
+   Carga configuraciones desde variables de entorno para mayor flexibilidad.
+   Ejemplo:
+
+   ```python
+   KAFKA_SERVER=localhost:9092
+   KAFKA_ACKS=1
+   KAFKA_BATCH_SIZE=65536
+   ```
+
+5. Mejora en la Gestión de Excepciones
+
+   Logs detallados y manejo específico de errores para facilitar la depuración.
+   Biblioteca loguru para logs más legibles y configurables.
+
+6. Optimización del Serializador/Deserializador
+
+   Mejora en la eficiencia y compatibilidad con diferentes tipos de datos.
+
 ## Buenas Prácticas
 
 - Definir temas y grupos de consumidores claramente para evitar duplicación de procesamiento.
@@ -791,14 +848,18 @@ Este enfoque simplificado permite la actualización y el uso de modelos en produ
 
 ## Contribuyendo
 
-1. Haz un fork del proyecto.
+1. Clona el repositorio.
 2. Crea una rama con tu nueva funcionalidad: git checkout -b mi-nueva-funcionalidad.
 3. Haz commit de tus cambios: git commit -m 'Agregar nueva funcionalidad'.
 4. Haz push de la rama: git push origin mi-nueva-funcionalidad.
-5. Crea un Pull Request.
+5. Abre una solicitud de extracción (Pull Request).
 
 ## License
 
 Este proyecto está bajo la licencia MIT, lo que significa que puedes usarlo, modificarlo y distribuirlo libremente, siempre que mantengas la atribución al autor original. Ver el archivo LICENSE para más detalles.
 
 [MIT](https://choosealicense.com/licenses/mit/)
+
+## Contacto
+
+Para cualquier pregunta o sugerencia, no dudes en abrir un issue en el repositorio o contactarnos directamente.
