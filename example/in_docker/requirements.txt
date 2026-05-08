@@ -1,3 +1,0 @@
-# wkafka
-opencv-python
-kafka-python

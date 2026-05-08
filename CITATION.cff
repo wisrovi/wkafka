@@ -1,9 +1,10 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-- family-names: "WISROVI"
-  given-names: "William Steve Rodriguez Villamizar"
-title: " Libreria python para hacer data augmentation en audios y/o extraer caracteristicas a audios"
-version: 0.22.10
-date-released: 2022-10-12
+- family-names: "Rodriguez Villamizar"
+  given-names: "William Steve"
+  orcid: "https://orcid.org/0000-0000-0000-0000"
+title: "WKafka: A professional Kafka wrapper for Python"
+version: 1.0.0
+date-released: 2024-05-08
 url: "https://github.com/wisrovi/wkafka"
