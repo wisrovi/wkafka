@@ -75,5 +75,18 @@ WKafka is tested against:
 - **Python**: 3.9 | 3.10 | 3.11 | 3.12 | 3.13 | 3.14 (pre-release)
 - **Kafka**: 2.x | 3.x (KRaft and Zookeeper)
 
+## 🗺️ Roadmap (Próximas Funcionalidades)
+
+WKafka busca simplificar Kafka sin perder la potencia de la librería base. Las siguientes funcionalidades están planeadas para futuras versiones:
+
+1.  **Transacciones (Exactly-once Semantics)**: Soporte para productores transaccionales y envíos atómicos ("todo o nada").
+2.  **Gestión Manual de Offsets**: Permitir el `.commit()` manual dentro de las funciones decoradas para un control total del procesamiento.
+3.  **Suscripción por Regex**: Soporte para patrones de tópicos (ej. `@kafka.consumer(topic="logs.*")`).
+4.  **Interceptores Globales**: Capacidad de añadir hooks de pre y post-procesamiento para todos los mensajes entrantes/salientes.
+5.  **Particionado Personalizado**: Control granular sobre la distribución de mensajes en las particiones del broker.
+6.  **Schema Registry Integration**: Soporte nativo para validación de esquemas Avro, Protobuf y JSON Schema.
+7.  **Métricas en Tiempo Real**: Integración directa con Prometheus/Grafana para monitorear el lag y el throughput.
+8.  **Headers Dinámicos**: Mejoras en la propagación de contextos y trazabilidad (OpenTelemetry).
+
 ## 📜 License
 MIT License. Created by [wisrovi](https://github.com/wisrovi).
