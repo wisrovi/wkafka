@@ -1,3 +1,6 @@
+<img width="1040" height="582" alt="image" src="https://github.com/user-attachments/assets/e03505ea-5bb0-4e99-b80d-c0d5c261a322" />
+
+
 # WKafka v1.0.0 LTS 🚀
 
 **Professional, Decorator-based Kafka Wrapper for Python.**
