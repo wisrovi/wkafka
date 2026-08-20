@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+
 @dataclass(frozen=True)
 class Message:
     """
@@ -14,9 +15,16 @@ class Message:
         headers (Dict[str, Any]): Decoded message headers.
         offset (int): The message offset in the partition.
     """
+
     value: Any
     topic: str
     group_id: str
     offset: int
     key: Optional[str] = None
     headers: Dict[str, Any] = None
+
+    @property
+    def header(self) -> Optional[Dict[str, Any]]:
+        """Alias for headers to maintain compatibility with legacy structures."""
+        return self.headers
+
