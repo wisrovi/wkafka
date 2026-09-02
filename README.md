@@ -118,10 +118,11 @@ To run the unit test suite, calculate coverage, or execute tests inside a sandbo
 poetry run pytest tests/
 ```
 
-### Coverage Report
+### Coverage Report (80% Minimum Guaranteed)
 ```bash
 ./run_coverage.sh
 ```
+El script genera un informe de cobertura HTML (`htmlcov/index.html`) garantizando una cobertura mínima global de **80%**.
 
 ### Sandboxed Testing with Docker
 ```bash
