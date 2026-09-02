@@ -5,7 +5,7 @@
 
 **Professional, Decorator-based Kafka Wrapper for Python.**
 
-WKafka simplifies Apache Kafka integration by providing a high-level, intuitive API focused on developer productivity. It includes built-in support for complex data types like JSON, YAML, and Images/Video, making it ideal for modern microservices, IoT, and Computer Vision pipelines.
+WKafka simplifies Apache Kafka integration by providing a high-level, intuitive API focused on developer productivity. It includes built-in support for complex data types like JSON, YAML, Images, Files, and Pydantic models, making it ideal for modern microservices, IoT, and Computer Vision pipelines.
 
 ---
 
@@ -14,9 +14,15 @@ WKafka simplifies Apache Kafka integration by providing a high-level, intuitive 
 - **Decorator-driven API**: Minimalistic and clean message handling.
 - **Modern Python**: Fully typed, PEP 8 compliant, supporting Python 3.9 through 3.14.
 - **Enterprise Security**: Built-in support for SASL (PLAIN, SCRAM) and KRaft mode.
-- **Multimedia Native**: Seamlessly send and receive images (OpenCV/NumPy/PIL).
+- **Multimedia & File Native**: Seamlessly send and receive images (OpenCV/NumPy/PIL) and arbitrary files (PDF, ZIP, TXT) via `format="file"`.
+- **Type-safe Pydantic Validation**: Automatic schema validation with `format="pydantic"`.
+- **Manual Offset Commit**: Control At-Least-Once delivery semantics with `auto_commit=False` and `msg.commit()`.
+- **Retries & Dead Letter Queue**: Automatic exponential backoff retries and DLQ routing (`max_retries`, `dlq_topic`).
+- **Multi-Topic & Regex Subscription**: Subscribe to topic lists (`topic=["a", "b"]`) or patterns (`pattern="sensor_.*"`).
+- **Async/Await Support**: Define non-blocking `async def` consumer handlers.
 - **Professional Ops**: Structured logging via `loguru` and multi-version testing with `tox`.
-- **Easy Deployment**: Modern Docker environments provided for development.
+
+---
 
 ## 📦 Installation
 
@@ -32,6 +38,8 @@ poetry add wkafka
 ```bash
 pip install wkafka[snappy]
 ```
+
+---
 
 ## 🚀 Quick Start
 
@@ -54,53 +62,52 @@ with kafka.producer() as p:
     p.send("orders", value={"id": 123, "item": "Coffee"}, format="json")
 ```
 
-### SASL Authentication
+### Manual Offset Commit
 ```python
-kafka = WKafka(
-    bootstrap_servers="my-secure-broker:30092",
-    security_protocol="SASL_PLAINTEXT",
-    sasl_mechanism="SCRAM-SHA-512",
-    sasl_plain_username="admin",
-    sasl_plain_password="password"
-)
+@kafka.consumer(topic="transactions", format="json", auto_commit=False)
+def handle_tx(msg):
+    # Process business logic
+    save_to_db(msg.value)
+    # Explicitly commit offset only after success
+    msg.commit()
 ```
+
+### Retries & DLQ Routing
+```python
+@kafka.consumer(
+    topic="unstable_events",
+    format="json",
+    max_retries=3,
+    retry_delay=1.0,
+    dlq_topic="unstable_events.DLQ"
+)
+def handle_event(msg):
+    process_payload(msg.value)
+```
+
+---
 
 ## 📂 Project Structure
 
-- `wkafka.core`: Orchestration and base logic.
-- `wkafka.serializers`: Extensible serialization system.
+- `wkafka.core`: Orchestration and base logic (`WKafka`, `Message`).
+- `wkafka.serializers`: Extensible serialization system (`JSONSerializer`, `YAMLSerializer`, `ImageSerializer`, `PydanticSerializer`, `FileSerializer`).
 - `wkafka.controller`: Backward compatibility layer for legacy code.
+- `examples/`: 12 complete, production-ready example modules (`01_basic` through `12_pydantic_validation`).
 - `enviroment/`: Production-ready Docker setups (KRaft, SASL).
 
-## 🧪 Compatibility
-
-WKafka is tested against:
-- **Python**: 3.9 | 3.10 | 3.11 | 3.12 | 3.13 | 3.14 (pre-release)
-- **Kafka**: 2.x | 3.x (KRaft and Zookeeper)
-
-## 🗺️ Roadmap (Próximas Funcionalidades)
-
-WKafka busca simplificar Kafka sin perder la potencia de la librería base. Las siguientes funcionalidades están planeadas para futuras versiones:
-
-1.  **Transacciones (Exactly-once Semantics)**: Soporte para productores transaccionales y envíos atómicos ("todo o nada").
-2.  **Gestión Manual de Offsets**: Permitir el `.commit()` manual dentro de las funciones decoradas para un control total del procesamiento.
-3.  **Suscripción por Regex**: Soporte para patrones de tópicos (ej. `@kafka.consumer(topic="logs.*")`).
-4.  **Interceptores Globales**: Capacidad de añadir hooks de pre y post-procesamiento para todos los mensajes entrantes/salientes.
-5.  **Particionado Personalizado**: Control granular sobre la distribución de mensajes en las particiones del broker.
-6.  **Schema Registry Integration**: Soporte nativo para validación de esquemas Avro, Protobuf y JSON Schema.
-7.  **Métricas en Tiempo Real**: Integración directa con Prometheus/Grafana para monitorear el lag y el throughput.
-8.  **Headers Dinámicos**: Mejoras en la propagación de contextos y trazabilidad (OpenTelemetry).
+---
 
 ## 🛠️ Tecnologías y Librerías Relevantes
 
 - **Python (3.9 - 3.14)**: Lenguaje principal de desarrollo y ejecución.
 - **kafka-python-ng / kafka-python**: Cliente subyacente para comunicación de bajo nivel con Apache Kafka.
-- **OpenCV (`opencv-python`) & Pillow**: Procesamiento, renderizado, serialización y deserealización eficiente de imágenes.
+- **OpenCV (`opencv-python`) & Pillow**: Procesamiento, renderizado, serialización y deserialización de imágenes.
+- **Pydantic**: Validación de esquemas y modelos de datos tipados (`format="pydantic"`).
 - **NumPy**: Manejo de estructuras de datos matriciales multidimensionales para imágenes.
 - **PyYAML**: Serialización y deserialización nativa de estructuras YAML.
 - **Loguru**: Sistema avanzado de logging estructurado.
-- **Pydantic**: Validación y definición de modelos de datos internos.
+
+---
 
 ## 📜 License
 MIT License. Created by [wisrovi](https://github.com/wisrovi).
-
