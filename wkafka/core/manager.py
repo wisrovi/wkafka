@@ -49,8 +49,8 @@ class WKafka:
             logger.add("wkafka.log", rotation="10 MB", level="INFO")
             _LOG_CONFIGURED = True
 
-        self.bootstrap_servers = bootstrap_servers or os.environ.get(
-            "KAFKA_SERVER", "localhost:9092"
+        self.bootstrap_servers = (
+            os.environ.get("KAFKA_SERVER") or bootstrap_servers or "localhost:9092"
         )
         self.client_id = client_id or "wkafka-client"
         self.dynamic_group_id = dynamic_group_id
