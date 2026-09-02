@@ -20,7 +20,7 @@ def test_legacy_wkafka_init():
     assert client.partition_scale is True
 
 
-@mock.patch("kafka.KafkaConsumer")
+@mock.patch("wkafka.core.manager.KafkaConsumer")
 def test_legacy_wkafka_consumer_and_send(mock_kafka_consumer):
     """
     Validates legacy Wkafka consumer registration and send method.
