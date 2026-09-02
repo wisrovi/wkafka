@@ -280,24 +280,22 @@ class WKafka:
                 except Exception as dlq_err:
                     logger.error(f"Failed to route message to DLQ: {dlq_err}")
 
-    def run_consumers(self, block: bool = True) -> None:
+    def run_consumers(self, block: bool = True, partition_scale: Optional[bool] = None) -> None:
         if not self._consumers_registry:
             logger.warning("No consumers registered. Nothing to run.")
             return
 
-        # Check partition auto-scaling for registered topics
-        topic_counts: Dict[str, int] = {}
-        for consumer_inst, func, options in self._consumers_registry:
-            topics = consumer_inst.subscription() or []
-            should_scale = options.get("partition_scale")
-            if should_scale is None:
-                should_scale = self.partition_scale
-            if should_scale:
+        should_auto_scale = self.partition_scale if partition_scale is None else partition_scale
+
+        if should_auto_scale:
+            topic_counts: Dict[str, int] = {}
+            for consumer_inst, func, options in self._consumers_registry:
+                topics = consumer_inst.subscription() or []
                 for t in topics:
                     topic_counts[t] = topic_counts.get(t, 0) + 1
 
-        for topic, count in topic_counts.items():
-            self._ensure_partitions(topic, count)
+            for topic, count in topic_counts.items():
+                self._ensure_partitions(topic, count)
 
         executor = concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self._consumers_registry), thread_name_prefix="WKafkaConsumer"
