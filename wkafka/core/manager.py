@@ -42,6 +42,7 @@ class WKafka:
         bootstrap_servers: Optional[Union[str, List[str]]] = None,
         client_id: Optional[str] = None,
         dynamic_group_id: bool = False,
+        partition_scale: bool = False,
         **extra_config: Any,
     ):
         global _LOG_CONFIGURED
@@ -54,10 +55,40 @@ class WKafka:
         )
         self.client_id = client_id or "wkafka-client"
         self.dynamic_group_id = dynamic_group_id
+        self.partition_scale = partition_scale
         self.extra_config = extra_config
         self._consumers_registry: List[Tuple[KafkaConsumer, Callable, Dict[str, Any]]] = []
         self._producer_instance: Optional[KafkaProducer] = None
         self._lock = threading.Lock()
+
+    def _ensure_partitions(self, topic: str, target_count: int) -> None:
+        """Dynamically scales the partition count of a topic to target_count using KafkaAdminClient."""
+        try:
+            from kafka.admin import KafkaAdminClient, NewPartitions
+            admin_config = {
+                "bootstrap_servers": self.bootstrap_servers,
+                "client_id": f"{self.client_id}-admin",
+            }
+            for k in ("security_protocol", "sasl_mechanism", "sasl_plain_username", "sasl_plain_password"):
+                if k in self.extra_config:
+                    admin_config[k] = self.extra_config[k]
+
+            admin = KafkaAdminClient(**admin_config)
+            try:
+                consumer_temp = KafkaConsumer(topic, bootstrap_servers=self.bootstrap_servers, **self.extra_config)
+                partitions = consumer_temp.partitions_for_topic(topic)
+                consumer_temp.close()
+
+                current_count = len(partitions) if partitions else 1
+                if current_count < target_count:
+                    logger.info(
+                        f"🚀 [PARTITION SCALE] Auto-scaling topic '{topic}' partitions from {current_count} to {target_count}"
+                    )
+                    admin.create_partitions({topic: NewPartitions(total_count=target_count)})
+            finally:
+                admin.close()
+        except Exception as e:
+            logger.warning(f"Could not auto-scale partitions for topic '{topic}': {e}")
 
     def _generate_group_id(self) -> str:
         return f"wkafka-{uuid.uuid4().hex[:8]}" if self.dynamic_group_id else "wkafka-default-group"
@@ -99,6 +130,7 @@ class WKafka:
         retry_delay: float = 1.0,
         dlq_topic: Optional[str] = None,
         model: Optional[Any] = None,
+        partition_scale: Optional[bool] = None,
         **kafka_kwargs: Any,
     ) -> Callable:
         def decorator(func: Callable) -> Callable:
@@ -116,7 +148,6 @@ class WKafka:
                 if k not in kafka_kwargs:
                     config[k] = v
 
-            # Handle single topic, list of topics, or regex pattern
             topics_args = []
             if pattern:
                 config["pattern"] = pattern
@@ -135,6 +166,7 @@ class WKafka:
                 "retry_delay": retry_delay,
                 "dlq_topic": dlq_topic,
                 "model": model,
+                "partition_scale": partition_scale,
             }
 
             self._consumers_registry.append((consumer_instance, func, options))
@@ -252,6 +284,20 @@ class WKafka:
         if not self._consumers_registry:
             logger.warning("No consumers registered. Nothing to run.")
             return
+
+        # Check partition auto-scaling for registered topics
+        topic_counts: Dict[str, int] = {}
+        for consumer_inst, func, options in self._consumers_registry:
+            topics = consumer_inst.subscription() or []
+            should_scale = options.get("partition_scale")
+            if should_scale is None:
+                should_scale = self.partition_scale
+            if should_scale:
+                for t in topics:
+                    topic_counts[t] = topic_counts.get(t, 0) + 1
+
+        for topic, count in topic_counts.items():
+            self._ensure_partitions(topic, count)
 
         executor = concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self._consumers_registry), thread_name_prefix="WKafkaConsumer"
