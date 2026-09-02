@@ -21,6 +21,7 @@ Esta suite está diseñada para que domines **WKafka v1.0.0 LTS** paso a paso, d
 | `11_async_handlers` | ⚡ Asíncrono | Handlers consumidores asíncronos con `async / await` e `asyncio`. |
 | `12_pydantic_validation` | 🛡️ Validación | Validación tipada de modelos Pydantic con `format="pydantic"`. |
 | `13_partition_scale` | 🚀 Escalabilidad | Auto-escalado dinámico de particiones por tópico (`partition_scale=True`) para paralelismo real. |
+| `14_interactive_producer` | 🎮 Herramientas | Consola interactiva CLI para escribir y publicar mensajes en tiempo real. |
 
 ---
 
