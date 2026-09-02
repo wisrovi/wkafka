@@ -31,7 +31,7 @@ def run_pipeline():
         target=lambda: kafka.run_consumers(block=True), daemon=True
     )
     consumer_thread.start()
-    time.sleep(2)
+    time.sleep(4)  # Wait for Kafka consumer group rebalance and partition assignment
 
     print("🚀 [PRODUCER] Transmitting files...")
     with kafka.producer() as producer:
