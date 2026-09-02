@@ -31,7 +31,7 @@ def run_pipeline():
         daemon=True
     )
     consumer_thread.start()
-    time.sleep(2)  # Wait for consumer group assignment
+    time.sleep(4)  # Wait for Kafka consumer group rebalance and partition assignment
 
     print("🚀 [PRODUCER] Starting frame generation & transmission...")
     with kafka.producer() as producer:
