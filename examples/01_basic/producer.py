@@ -1,4 +1,5 @@
 from wkafka import WKafka
+
 kafka = WKafka()
 if __name__ == "__main__":
     with kafka.producer() as p:
