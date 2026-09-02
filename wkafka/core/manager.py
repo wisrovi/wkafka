@@ -238,10 +238,16 @@ class WKafka:
                 (lambda: consumer.commit()) if not auto_commit else None
             )
 
+            config_obj = getattr(consumer, "config", None)
+            group_id = (
+                config_obj.get("group_id", "wkafka-group")
+                if isinstance(config_obj, dict)
+                else "wkafka-group"
+            )
             msg_obj = Message(
                 value=value,
                 topic=raw_msg.topic,
-                group_id=consumer.config["group_id"],
+                group_id=group_id,
                 offset=raw_msg.offset,
                 key=raw_msg.key.decode("utf-8") if raw_msg.key and isinstance(raw_msg.key, bytes) else raw_msg.key,
                 headers=headers,
