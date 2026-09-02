@@ -1,10 +1,13 @@
+import threading
+import time
+
 import cv2
 import numpy as np
-import time
-import threading
+
 from wkafka import WKafka
 
 kafka = WKafka(dynamic_group_id=True)
+
 
 @kafka.consumer(topic="stream_images", format="image")
 def process_frame(msg):
@@ -12,8 +15,9 @@ def process_frame(msg):
     print(f"🖼️ Frame recibido con dimensiones: {frame.shape}")
     cv2.imwrite("received_frame.jpg", frame)
 
+
 threading.Thread(target=lambda: kafka.run_consumers(block=True), daemon=True).start()
-time.sleep(2)
+time.sleep(4)  # Wait for Kafka consumer group rebalance
 
 dummy_frame = np.zeros((480, 640, 3), dtype=np.uint8)
 cv2.circle(dummy_frame, (320, 240), 100, (255, 0, 0), -1)
