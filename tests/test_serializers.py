@@ -109,8 +109,7 @@ def test_pydantic_serializer():
 def test_file_serializer(tmp_path):
     """
     Validates FileSerializer handling raw bytes and file paths.
-    Verifies that raw bytes or content from a file path are serialized correctly
-    and returned as byte content.
+    Verifies that raw bytes, file paths, dicts, or strings are serialized correctly.
     """
     serializer = FileSerializer()
     test_bytes = b"Sample raw binary file data"
@@ -120,3 +119,78 @@ def test_file_serializer(tmp_path):
     
     decoded = serializer.deserialize(encoded)
     assert decoded == test_bytes
+
+    # Test file path on disk
+    file_path = tmp_path / "test.txt"
+    file_path.write_bytes(b"File content from disk")
+    encoded_file = serializer.serialize(str(file_path))
+    assert encoded_file == b"File content from disk"
+
+    # Test dict with bytes content
+    encoded_dict_bytes = serializer.serialize({"content": b"dict bytes"})
+    assert encoded_dict_bytes == b"dict bytes"
+
+    # Test dict with string content
+    encoded_dict_str = serializer.serialize({"content": "dict str"})
+    assert encoded_dict_str == b"dict str"
+
+    # Test plain string
+    encoded_str = serializer.serialize("plain string content")
+    assert encoded_str == b"plain string content"
+
+    import pytest
+    with pytest.raises(TypeError):
+        serializer.serialize(12345)
+
+
+def test_image_serializer_errors():
+    """
+    Validates ImageSerializer exception branches for invalid input types and decoding failures.
+    """
+    import pytest
+    serializer = ImageSerializer()
+
+    # Invalid input type
+    with pytest.raises(TypeError):
+        serializer.serialize("not_an_image")
+
+    # Invalid image bytes
+    with pytest.raises(ValueError):
+        serializer.deserialize(b"invalid_jpeg_data")
+
+
+def test_pydantic_serializer_fallbacks():
+    """
+    Validates PydanticSerializer fallbacks for dicts, primitive strings, and legacy model methods.
+    """
+    serializer = PydanticSerializer()
+
+    # Legacy model with .json() method
+    class LegacyModel:
+        def json(self):
+            return '{"legacy": true}'
+
+    encoded_legacy = serializer.serialize(LegacyModel())
+    assert encoded_legacy == b'{"legacy": true}'
+
+    # Dict input
+    encoded_dict = serializer.serialize({"dict_key": "value"})
+    assert encoded_dict == b'{"dict_key": "value"}'
+
+    # Primitive string fallback
+    encoded_str = serializer.serialize(12345)
+    assert encoded_str == b"12345"
+
+    # Deserialization without model
+    decoded_raw = serializer.deserialize(b'{"key": "val"}')
+    assert decoded_raw == {"key": "val"}
+
+    # Deserialization with legacy parse_raw model
+    class LegacyParseModel:
+        @classmethod
+        def parse_raw(cls, text):
+            return {"parsed": text}
+
+    decoded_legacy_parse = serializer.deserialize(b'{"key": "val"}', model=LegacyParseModel)
+    assert decoded_legacy_parse == {"parsed": '{"key": "val"}'}
+
