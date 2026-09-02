@@ -109,5 +109,27 @@ def handle_event(msg):
 
 ---
 
+## 🧪 Unit Testing & Coverage
+
+To run the unit test suite, calculate coverage, or execute tests inside a sandboxed Docker container:
+
+### Run Locally (pytest)
+```bash
+poetry run pytest tests/
+```
+
+### Coverage Report
+```bash
+./run_coverage.sh
+```
+
+### Sandboxed Testing with Docker
+```bash
+./run_tests_docker.sh
+```
+
+---
+
 ## 📜 License
 MIT License. Created by [wisrovi](https://github.com/wisrovi).
+
