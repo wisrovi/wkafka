@@ -279,3 +279,138 @@ def test_ensure_partitions(mock_consumer_cls, mock_admin_cls):
 
     kafka._ensure_partitions("test_topic", target_count=3)
     mock_admin_inst.create_partitions.assert_called_once()
+
+
+@mock.patch("kafka.admin.KafkaAdminClient")
+@mock.patch("wkafka.core.manager.KafkaConsumer")
+def test_ensure_partitions_create_topic(mock_consumer_cls, mock_admin_cls):
+    """
+    Validates _ensure_partitions when topic does not exist (partitions is None).
+    Verifies admin.create_topics is called.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    mock_admin_inst = mock.MagicMock()
+    mock_admin_cls.return_value = mock_admin_inst
+
+    mock_cons_inst = mock.MagicMock()
+    mock_cons_inst.partitions_for_topic.return_value = None
+    mock_consumer_cls.return_value = mock_cons_inst
+
+    kafka._ensure_partitions("new_topic", target_count=4)
+    mock_admin_inst.create_topics.assert_called_once()
+
+
+def test_ensure_partitions_exception():
+    """
+    Validates _ensure_partitions error handling when KafkaAdminClient raises an exception.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    with mock.patch("kafka.admin.KafkaAdminClient", side_effect=Exception("Admin error")):
+        # Should log warning and not crash
+        kafka._ensure_partitions("test_topic", target_count=2)
+
+
+def test_handle_message_key_filter_skip_and_header_decode_error():
+    """
+    Validates _handle_message skipping messages that do not match key_filter
+    and handling non-utf8 headers cleanly.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    msg_skip = mock.MagicMock()
+    msg_skip.key = b"wrong_key"
+
+    msg_process = mock.MagicMock()
+    msg_process.key = b"target_key"
+    msg_process.value = b'{"a": 1}'
+    msg_process.topic = "test_topic"
+    msg_process.partition = 0
+    msg_process.offset = 2
+    msg_process.headers = [("bad_header", b"\xff\xfe\xfd")]
+
+    mock_consumer = mock.MagicMock()
+    mock_consumer.__iter__.return_value = [msg_skip, msg_process]
+
+    processed = False
+
+    def handler(msg):
+        nonlocal processed
+        processed = True
+        assert msg.header["bad_header"] == b"\xff\xfe\xfd"
+
+    options = {"key_filter": b"target_key", "format": "json", "auto_commit": True}
+    kafka._handle_message(mock_consumer, handler, options)
+    assert processed
+
+
+def test_handle_message_deserialization_and_dlq_errors():
+    """
+    Validates _handle_message error logs when deserialization fails and DLQ send fails.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    msg_bad = mock.MagicMock()
+    msg_bad.key = None
+    msg_bad.value = b"invalid json data"
+    msg_bad.topic = "test_topic"
+    msg_bad.partition = 0
+    msg_bad.offset = 3
+    msg_bad.headers = None
+
+    mock_consumer = mock.MagicMock()
+    mock_consumer.__iter__.return_value = [msg_bad]
+
+    def failing_handler(msg):
+        raise ValueError("Callback crash")
+
+    options = {
+        "format": "json",
+        "auto_commit": True,
+        "max_retries": 0,
+        "retry_delay": 0.001,
+        "dlq_topic": "dlq_topic_test",
+    }
+
+    with mock.patch.object(kafka, "send", side_effect=Exception("DLQ send failed")):
+        kafka._handle_message(mock_consumer, failing_handler, options)
+
+
+def test_run_consumers_empty_and_execution():
+    """
+    Validates run_consumers when no consumers registered, and when consumers run in ThreadPoolExecutor.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    # Empty run
+    kafka.run_consumers()
+
+    # Registered consumer execution
+    mock_cons = mock.MagicMock()
+    mock_cons.subscription.return_value = ["topic1"]
+    mock_cons.__iter__.return_value = []
+
+    def dummy_handler(msg):
+        pass
+
+    kafka._consumers_registry.append((mock_cons, dummy_handler, {"format": "json"}))
+
+    with mock.patch.object(kafka, "_ensure_partitions") as mock_ensure:
+        kafka.run_consumers(block=True, partition_scale=True)
+        mock_ensure.assert_called_once_with("topic1", 1)
+
+
+def test_send_raw_format_and_bytes_headers():
+    """
+    Validates send method with unregistered format pass-through and bytes headers.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    mock_prod_inst = mock.MagicMock()
+    kafka._producer_instance = mock_prod_inst
+
+    kafka.send(
+        "test_topic",
+        value=b"raw_bytes",
+        format="raw_custom",
+        headers={"h_str": "str_val", "h_bytes": b"bytes_val"},
+    )
+    mock_prod_inst.send.assert_called_once()
+    args, kwargs = mock_prod_inst.send.call_args
+    assert kwargs["headers"] == [("h_str", b"str_val"), ("h_bytes", b"bytes_val")]
+
