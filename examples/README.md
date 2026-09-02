@@ -20,6 +20,7 @@ Esta suite está diseñada para que domines **WKafka v1.0.0 LTS** paso a paso, d
 | `10_multi_topic_regex` | 🎯 Routing | Suscripción a múltiples tópicos (`topic=[...]`) y patrones Regex (`pattern="..."`). |
 | `11_async_handlers` | ⚡ Asíncrono | Handlers consumidores asíncronos con `async / await` e `asyncio`. |
 | `12_pydantic_validation` | 🛡️ Validación | Validación tipada de modelos Pydantic con `format="pydantic"`. |
+| `13_partition_scale` | 🚀 Escalabilidad | Auto-escalado dinámico de particiones por tópico (`partition_scale=True`) para paralelismo real. |
 
 ---
 
