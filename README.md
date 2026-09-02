@@ -91,5 +91,16 @@ WKafka busca simplificar Kafka sin perder la potencia de la librería base. Las 
 7.  **Métricas en Tiempo Real**: Integración directa con Prometheus/Grafana para monitorear el lag y el throughput.
 8.  **Headers Dinámicos**: Mejoras en la propagación de contextos y trazabilidad (OpenTelemetry).
 
+## 🛠️ Tecnologías y Librerías Relevantes
+
+- **Python (3.9 - 3.14)**: Lenguaje principal de desarrollo y ejecución.
+- **kafka-python-ng / kafka-python**: Cliente subyacente para comunicación de bajo nivel con Apache Kafka.
+- **OpenCV (`opencv-python`) & Pillow**: Procesamiento, renderizado, serialización y deserealización eficiente de imágenes.
+- **NumPy**: Manejo de estructuras de datos matriciales multidimensionales para imágenes.
+- **PyYAML**: Serialización y deserialización nativa de estructuras YAML.
+- **Loguru**: Sistema avanzado de logging estructurado.
+- **Pydantic**: Validación y definición de modelos de datos internos.
+
 ## 📜 License
 MIT License. Created by [wisrovi](https://github.com/wisrovi).
+
