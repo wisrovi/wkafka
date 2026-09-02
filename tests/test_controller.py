@@ -42,3 +42,16 @@ def test_legacy_wkafka_consumer_and_send(mock_kafka_consumer):
         mock_super_send.assert_called_once_with(
             topic="legacy_topic", value={"a": 1}, key=None, format="json", headers={"h": 2}
         )
+
+
+def test_legacy_module_import_structure():
+    """
+    Validates legacy import structure compatibility (wkafka.wkafka).
+    Ensures code expecting wkafka.wkafka (or from wkafka.wkafka import Wkafka) works.
+    """
+    import wkafka
+
+    assert hasattr(wkafka, "wkafka")
+    assert hasattr(wkafka.wkafka, "Wkafka")
+    assert hasattr(wkafka.wkafka, "WKafka")
+
