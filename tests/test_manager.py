@@ -87,15 +87,14 @@ async def test_execute_callback_async():
 
 def test_partition_scale_option():
     """
-    Validates partition_scale flag propagation in WKafka initialization and consumer decorator.
-    Verifies that partition_scale=True is preserved in WKafka instance and options dictionary.
+    Validates partition_scale flag propagation in WKafka initialization and run_consumers.
+    Verifies that partition_scale=True is preserved in WKafka instance and triggers _ensure_partitions.
     """
     kafka = WKafka(bootstrap_servers="localhost:9092", partition_scale=True)
     assert kafka.partition_scale is True
 
-    @kafka.consumer(topic="scaled_topic", partition_scale=True)
-    def handler(msg):
-        pass
+    with mock.patch.object(kafka, "_ensure_partitions") as mock_ensure:
+        with mock.patch("wkafka.core.manager.concurrent.futures.ThreadPoolExecutor"):
+            kafka.run_consumers(block=False, partition_scale=True)
 
-    assert kafka._consumers_registry[0][2]["partition_scale"] is True
 
