@@ -64,7 +64,7 @@ class WKafka:
     def _ensure_partitions(self, topic: str, target_count: int) -> None:
         """Dynamically scales the partition count of a topic to target_count using KafkaAdminClient."""
         try:
-            from kafka.admin import KafkaAdminClient, NewPartitions
+            from kafka.admin import KafkaAdminClient, NewPartitions, NewTopic
             admin_config = {
                 "bootstrap_servers": self.bootstrap_servers,
                 "client_id": f"{self.client_id}-admin",
@@ -79,12 +79,18 @@ class WKafka:
                 partitions = consumer_temp.partitions_for_topic(topic)
                 consumer_temp.close()
 
-                current_count = len(partitions) if partitions else 1
-                if current_count < target_count:
+                if partitions is None:
                     logger.info(
-                        f"🚀 [PARTITION SCALE] Auto-scaling topic '{topic}' partitions from {current_count} to {target_count}"
+                        f"🚀 [PARTITION SCALE] Creating topic '{topic}' with {target_count} initial partitions."
                     )
-                    admin.create_partitions({topic: NewPartitions(total_count=target_count)})
+                    admin.create_topics([NewTopic(name=topic, num_partitions=target_count, replication_factor=1)])
+                else:
+                    current_count = len(partitions)
+                    if current_count < target_count:
+                        logger.info(
+                            f"🚀 [PARTITION SCALE] Auto-scaling topic '{topic}' partitions from {current_count} to {target_count}."
+                        )
+                        admin.create_partitions({topic: NewPartitions(total_count=target_count)})
             finally:
                 admin.close()
         except Exception as e:
