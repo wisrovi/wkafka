@@ -83,3 +83,19 @@ async def test_execute_callback_async():
     result = kafka._execute_callback(async_handler, msg)
     assert called
     assert result == "async_success"
+
+
+def test_partition_scale_option():
+    """
+    Validates partition_scale flag propagation in WKafka initialization and consumer decorator.
+    Verifies that partition_scale=True is preserved in WKafka instance and options dictionary.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092", partition_scale=True)
+    assert kafka.partition_scale is True
+
+    @kafka.consumer(topic="scaled_topic", partition_scale=True)
+    def handler(msg):
+        pass
+
+    assert kafka._consumers_registry[0][2]["partition_scale"] is True
+
