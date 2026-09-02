@@ -70,6 +70,10 @@ class WKafka:
                     import snappy
                 except ImportError:
                     compression = "gzip"
+                    logger.info(
+                        "Package 'python-snappy' not found; falling back to 'gzip' compression. "
+                        "For maximum performance, install snappy via: pip install wkafka[snappy]"
+                    )
 
                 producer_config = {
                     "bootstrap_servers": self.bootstrap_servers,
