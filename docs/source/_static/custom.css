@@ -1,0 +1,23 @@
+/* custom.css — Furo theme overrides for WKafka docs */
+
+/* Announcement bar: brand accent */
+:root {
+    --color-brand-primary: #0070f3;
+    --color-brand-content: #0070f3;
+}
+
+/* Tighter sidebar spacing */
+.sidebar-brand-text {
+    font-size: 1rem;
+}
+
+/* Code blocks: slightly larger for copybutton readability */
+pre {
+    font-size: 0.85rem;
+}
+
+/* Responsive image sizing in tutorial admonitions */
+img {
+    max-width: 100%;
+    height: auto;
+}
