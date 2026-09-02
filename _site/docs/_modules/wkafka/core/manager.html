@@ -1,0 +1,482 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wkafka.core.manager &mdash; WKafka 1.0.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=e2a723ec"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            WKafka
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples &amp; Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../technologies.html">🛠️ Tecnologías y Librerías Relevantes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">WKafka</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wkafka.core.manager</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wkafka.core.manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">concurrent.futures</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">wraps</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">kafka</span><span class="w"> </span><span class="kn">import</span> <span class="n">KafkaConsumer</span><span class="p">,</span> <span class="n">KafkaProducer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">loguru</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">wkafka.core.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Message</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">wkafka.serializers.base</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FileSerializer</span><span class="p">,</span>
+    <span class="n">ImageSerializer</span><span class="p">,</span>
+    <span class="n">JSONSerializer</span><span class="p">,</span>
+    <span class="n">PydanticSerializer</span><span class="p">,</span>
+    <span class="n">YAMLSerializer</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Global to ensure logger is configured only once</span>
+<span class="n">_LOG_CONFIGURED</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="WKafka">
+<a class="viewcode-back" href="../../../api.html#wkafka.core.manager.WKafka">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WKafka</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The main orchestrator for Kafka production and consumption.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_SERIALIZERS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">JSONSerializer</span><span class="p">(),</span>
+        <span class="s2">&quot;yaml&quot;</span><span class="p">:</span> <span class="n">YAMLSerializer</span><span class="p">(),</span>
+        <span class="s2">&quot;image&quot;</span><span class="p">:</span> <span class="n">ImageSerializer</span><span class="p">(),</span>
+        <span class="s2">&quot;pydantic&quot;</span><span class="p">:</span> <span class="n">PydanticSerializer</span><span class="p">(),</span>
+        <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="n">FileSerializer</span><span class="p">(),</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">bootstrap_servers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">client_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dynamic_group_id</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">partition_scale</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">extra_config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">global</span> <span class="n">_LOG_CONFIGURED</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_LOG_CONFIGURED</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;wkafka.log&quot;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="s2">&quot;10 MB&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;INFO&quot;</span><span class="p">)</span>
+            <span class="n">_LOG_CONFIGURED</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bootstrap_servers</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;KAFKA_SERVER&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">bootstrap_servers</span> <span class="ow">or</span> <span class="s2">&quot;localhost:9092&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client_id</span> <span class="o">=</span> <span class="n">client_id</span> <span class="ow">or</span> <span class="s2">&quot;wkafka-client&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dynamic_group_id</span> <span class="o">=</span> <span class="n">dynamic_group_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partition_scale</span> <span class="o">=</span> <span class="n">partition_scale</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extra_config</span> <span class="o">=</span> <span class="n">extra_config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_consumers_registry</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">KafkaConsumer</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_producer_instance</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">KafkaProducer</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target_count</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dynamically scales the partition count of a topic to target_count using KafkaAdminClient.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">kafka.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">KafkaAdminClient</span><span class="p">,</span> <span class="n">NewPartitions</span><span class="p">,</span> <span class="n">NewTopic</span>
+            <span class="n">admin_config</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;bootstrap_servers&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">bootstrap_servers</span><span class="p">,</span>
+                <span class="s2">&quot;client_id&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">client_id</span><span class="si">}</span><span class="s2">-admin&quot;</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;security_protocol&quot;</span><span class="p">,</span> <span class="s2">&quot;sasl_mechanism&quot;</span><span class="p">,</span> <span class="s2">&quot;sasl_plain_username&quot;</span><span class="p">,</span> <span class="s2">&quot;sasl_plain_password&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">extra_config</span><span class="p">:</span>
+                    <span class="n">admin_config</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extra_config</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+            <span class="n">admin</span> <span class="o">=</span> <span class="n">KafkaAdminClient</span><span class="p">(</span><span class="o">**</span><span class="n">admin_config</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">consumer_temp</span> <span class="o">=</span> <span class="n">KafkaConsumer</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span> <span class="n">bootstrap_servers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bootstrap_servers</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">extra_config</span><span class="p">)</span>
+                <span class="n">partitions</span> <span class="o">=</span> <span class="n">consumer_temp</span><span class="o">.</span><span class="n">partitions_for_topic</span><span class="p">(</span><span class="n">topic</span><span class="p">)</span>
+                <span class="n">consumer_temp</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="n">partitions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;🚀 [PARTITION SCALE] Creating topic &#39;</span><span class="si">{</span><span class="n">topic</span><span class="si">}</span><span class="s2">&#39; with </span><span class="si">{</span><span class="n">target_count</span><span class="si">}</span><span class="s2"> initial partitions.&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">admin</span><span class="o">.</span><span class="n">create_topics</span><span class="p">([</span><span class="n">NewTopic</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">topic</span><span class="p">,</span> <span class="n">num_partitions</span><span class="o">=</span><span class="n">target_count</span><span class="p">,</span> <span class="n">replication_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">)])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">current_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">partitions</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">current_count</span> <span class="o">&lt;</span> <span class="n">target_count</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;🚀 [PARTITION SCALE] Auto-scaling topic &#39;</span><span class="si">{</span><span class="n">topic</span><span class="si">}</span><span class="s2">&#39; partitions from </span><span class="si">{</span><span class="n">current_count</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">target_count</span><span class="si">}</span><span class="s2">.&quot;</span>
+                        <span class="p">)</span>
+                        <span class="n">admin</span><span class="o">.</span><span class="n">create_partitions</span><span class="p">({</span><span class="n">topic</span><span class="p">:</span> <span class="n">NewPartitions</span><span class="p">(</span><span class="n">total_count</span><span class="o">=</span><span class="n">target_count</span><span class="p">)})</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="n">admin</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not auto-scale partitions for topic &#39;</span><span class="si">{</span><span class="n">topic</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_generate_group_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;wkafka-</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamic_group_id</span> <span class="k">else</span> <span class="s2">&quot;wkafka-default-group&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_producer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">KafkaProducer</span><span class="p">:</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_producer_instance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">compression</span> <span class="o">=</span> <span class="s2">&quot;snappy&quot;</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="kn">import</span><span class="w"> </span><span class="nn">snappy</span>
+                <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+                    <span class="n">compression</span> <span class="o">=</span> <span class="s2">&quot;gzip&quot;</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                        <span class="s2">&quot;Package &#39;python-snappy&#39; not found; falling back to &#39;gzip&#39; compression. &quot;</span>
+                        <span class="s2">&quot;For maximum performance, install snappy via: pip install wkafka[snappy]&quot;</span>
+                    <span class="p">)</span>
+
+                <span class="n">producer_config</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;bootstrap_servers&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">bootstrap_servers</span><span class="p">,</span>
+                    <span class="s2">&quot;acks&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;KAFKA_ACKS&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)),</span>
+                    <span class="s2">&quot;compression_type&quot;</span><span class="p">:</span> <span class="n">compression</span><span class="p">,</span>
+                    <span class="s2">&quot;value_serializer&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="p">,</span>
+                    <span class="s2">&quot;key_serializer&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">k</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">k</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="n">producer_config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extra_config</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_producer_instance</span> <span class="o">=</span> <span class="n">KafkaProducer</span><span class="p">(</span><span class="o">**</span><span class="n">producer_config</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_producer_instance</span>
+
+<div class="viewcode-block" id="WKafka.consumer">
+<a class="viewcode-back" href="../../../api.html#wkafka.core.manager.WKafka.consumer">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">consumer</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">topic</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">pattern</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">group_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">key_filter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;json&quot;</span><span class="p">,</span>
+        <span class="n">auto_commit</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">max_retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">retry_delay</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">dlq_topic</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">partition_scale</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kafka_kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">decorator</span><span class="p">(</span><span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+            <span class="n">final_group_id</span> <span class="o">=</span> <span class="n">group_id</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_group_id</span><span class="p">()</span>
+
+            <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;bootstrap_servers&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">bootstrap_servers</span><span class="p">,</span>
+                <span class="s2">&quot;group_id&quot;</span><span class="p">:</span> <span class="n">final_group_id</span><span class="p">,</span>
+                <span class="s2">&quot;auto_offset_reset&quot;</span><span class="p">:</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;enable_auto_commit&quot;</span><span class="p">:</span> <span class="n">auto_commit</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kafka_kwargs</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">extra_config</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kafka_kwargs</span><span class="p">:</span>
+                    <span class="n">config</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+            <span class="n">topics_args</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">pattern</span><span class="p">:</span>
+                <span class="n">config</span><span class="p">[</span><span class="s2">&quot;pattern&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pattern</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">topics_args</span> <span class="o">=</span> <span class="n">topic</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">topics_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">topic</span><span class="p">]</span>
+
+            <span class="n">consumer_instance</span> <span class="o">=</span> <span class="n">KafkaConsumer</span><span class="p">(</span><span class="o">*</span><span class="n">topics_args</span><span class="p">,</span> <span class="o">**</span><span class="n">config</span><span class="p">)</span>
+
+            <span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;key_filter&quot;</span><span class="p">:</span> <span class="n">key_filter</span><span class="p">,</span>
+                <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="nb">format</span><span class="p">,</span>
+                <span class="s2">&quot;auto_commit&quot;</span><span class="p">:</span> <span class="n">auto_commit</span><span class="p">,</span>
+                <span class="s2">&quot;max_retries&quot;</span><span class="p">:</span> <span class="n">max_retries</span><span class="p">,</span>
+                <span class="s2">&quot;retry_delay&quot;</span><span class="p">:</span> <span class="n">retry_delay</span><span class="p">,</span>
+                <span class="s2">&quot;dlq_topic&quot;</span><span class="p">:</span> <span class="n">dlq_topic</span><span class="p">,</span>
+                <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span>
+                <span class="s2">&quot;partition_scale&quot;</span><span class="p">:</span> <span class="n">partition_scale</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_consumers_registry</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">consumer_instance</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">options</span><span class="p">))</span>
+
+            <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">wrapper</span>
+
+        <span class="k">return</span> <span class="n">decorator</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_execute_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">msg_obj</span><span class="p">:</span> <span class="n">Message</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Executes sync or async callback functions.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">iscoroutinefunction</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_running_loop</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+                <span class="n">loop</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="k">if</span> <span class="n">loop</span> <span class="ow">and</span> <span class="n">loop</span><span class="o">.</span><span class="n">is_running</span><span class="p">():</span>
+                <span class="n">future</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run_coroutine_threadsafe</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="n">msg_obj</span><span class="p">),</span> <span class="n">loop</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="n">msg_obj</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">msg_obj</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_handle_message</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">consumer</span><span class="p">:</span> <span class="n">KafkaConsumer</span><span class="p">,</span> <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">options</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">key_filter</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;key_filter&quot;</span><span class="p">)</span>
+        <span class="n">data_format</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">,</span> <span class="s2">&quot;json&quot;</span><span class="p">)</span>
+        <span class="n">auto_commit</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;auto_commit&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">max_retries</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max_retries&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">retry_delay</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;retry_delay&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">dlq_topic</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dlq_topic&quot;</span><span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">raw_msg</span> <span class="ow">in</span> <span class="n">consumer</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key_filter</span> <span class="ow">and</span> <span class="n">raw_msg</span><span class="o">.</span><span class="n">key</span> <span class="o">!=</span> <span class="n">key_filter</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">raw_msg</span><span class="o">.</span><span class="n">headers</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">raw_msg</span><span class="o">.</span><span class="n">headers</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">headers</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                        <span class="n">headers</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+            <span class="n">value</span> <span class="o">=</span> <span class="n">raw_msg</span><span class="o">.</span><span class="n">value</span>
+            <span class="k">if</span> <span class="n">data_format</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SERIALIZERS</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="k">if</span> <span class="n">model</span><span class="p">:</span>
+                        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SERIALIZERS</span><span class="p">[</span><span class="n">data_format</span><span class="p">]</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to deserialize message in </span><span class="si">{</span><span class="n">data_format</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">commit_callback</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">consumer</span><span class="o">.</span><span class="n">commit</span><span class="p">())</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">auto_commit</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+
+            <span class="n">config_obj</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">consumer</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">group_id</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">config_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;group_id&quot;</span><span class="p">,</span> <span class="s2">&quot;wkafka-group&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">config_obj</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                <span class="k">else</span> <span class="s2">&quot;wkafka-group&quot;</span>
+            <span class="p">)</span>
+            <span class="n">msg_obj</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span>
+                <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+                <span class="n">topic</span><span class="o">=</span><span class="n">raw_msg</span><span class="o">.</span><span class="n">topic</span><span class="p">,</span>
+                <span class="n">group_id</span><span class="o">=</span><span class="n">group_id</span><span class="p">,</span>
+                <span class="n">offset</span><span class="o">=</span><span class="n">raw_msg</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span>
+                <span class="n">key</span><span class="o">=</span><span class="n">raw_msg</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">raw_msg</span><span class="o">.</span><span class="n">key</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw_msg</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">raw_msg</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+                <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+                <span class="n">_commit_fn</span><span class="o">=</span><span class="n">commit_callback</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">success</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">last_exception</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_retries</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_callback</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">msg_obj</span><span class="p">)</span>
+                    <span class="n">success</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;exit&quot;</span><span class="p">):</span>
+                        <span class="k">return</span>
+                    <span class="k">break</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">last_exception</span> <span class="o">=</span> <span class="n">e</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Consumer error (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">max_retries</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="n">max_retries</span><span class="p">:</span>
+                        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">retry_delay</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="n">attempt</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">success</span> <span class="ow">and</span> <span class="n">dlq_topic</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Routing message offset </span><span class="si">{</span><span class="n">msg_obj</span><span class="o">.</span><span class="n">offset</span><span class="si">}</span><span class="s2"> on topic </span><span class="si">{</span><span class="n">msg_obj</span><span class="o">.</span><span class="n">topic</span><span class="si">}</span><span class="s2"> to DLQ &#39;</span><span class="si">{</span><span class="n">dlq_topic</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+                <span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">producer</span><span class="p">()</span> <span class="k">as</span> <span class="n">dlq_producer</span><span class="p">:</span>
+                        <span class="n">dlq_headers</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">msg_obj</span><span class="o">.</span><span class="n">headers</span> <span class="ow">or</span> <span class="p">{})</span>
+                        <span class="n">dlq_headers</span><span class="p">[</span><span class="s2">&quot;x-error-message&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">last_exception</span><span class="p">)</span>
+                        <span class="n">dlq_headers</span><span class="p">[</span><span class="s2">&quot;x-original-topic&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">msg_obj</span><span class="o">.</span><span class="n">topic</span>
+                        <span class="n">dlq_headers</span><span class="p">[</span><span class="s2">&quot;x-original-offset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">msg_obj</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
+                        <span class="n">dlq_producer</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+                            <span class="n">dlq_topic</span><span class="p">,</span>
+                            <span class="n">value</span><span class="o">=</span><span class="n">msg_obj</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                            <span class="n">key</span><span class="o">=</span><span class="n">msg_obj</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+                            <span class="nb">format</span><span class="o">=</span><span class="n">data_format</span><span class="p">,</span>
+                            <span class="n">headers</span><span class="o">=</span><span class="n">dlq_headers</span><span class="p">,</span>
+                        <span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">dlq_err</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to route message to DLQ: </span><span class="si">{</span><span class="n">dlq_err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="WKafka.run_consumers">
+<a class="viewcode-back" href="../../../api.html#wkafka.core.manager.WKafka.run_consumers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_consumers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">partition_scale</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_consumers_registry</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No consumers registered. Nothing to run.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">should_auto_scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_scale</span> <span class="k">if</span> <span class="n">partition_scale</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">partition_scale</span>
+
+        <span class="k">if</span> <span class="n">should_auto_scale</span><span class="p">:</span>
+            <span class="n">topic_counts</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">consumer_inst</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">options</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_consumers_registry</span><span class="p">:</span>
+                <span class="n">topics</span> <span class="o">=</span> <span class="n">consumer_inst</span><span class="o">.</span><span class="n">subscription</span><span class="p">()</span> <span class="ow">or</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">topics</span><span class="p">:</span>
+                    <span class="n">topic_counts</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">topic_counts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+            <span class="k">for</span> <span class="n">topic</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">topic_counts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_partitions</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+
+        <span class="n">executor</span> <span class="o">=</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span>
+            <span class="n">max_workers</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_consumers_registry</span><span class="p">),</span> <span class="n">thread_name_prefix</span><span class="o">=</span><span class="s2">&quot;WKafkaConsumer&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">futures</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">consumer</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">options</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_consumers_registry</span><span class="p">:</span>
+            <span class="n">futures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_handle_message</span><span class="p">,</span> <span class="n">consumer</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">block</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">as_completed</span><span class="p">(</span><span class="n">futures</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Consumer thread crashed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WKafka.send">
+<a class="viewcode-back" href="../../../api.html#wkafka.core.manager.WKafka.send">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;json&quot;</span><span class="p">,</span>
+        <span class="n">headers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="n">producer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_producer</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">format</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SERIALIZERS</span><span class="p">:</span>
+            <span class="n">serialized_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SERIALIZERS</span><span class="p">[</span><span class="nb">format</span><span class="p">]</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">serialized_value</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="n">kafka_headers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">headers</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">headers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="n">v</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+                <span class="n">kafka_headers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">producer</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">serialized_value</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">kafka_headers</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WKafka.producer">
+<a class="viewcode-back" href="../../../api.html#wkafka.core.manager.WKafka.producer">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">producer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;WKafka&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;WKafka&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">exc_val</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">exc_tb</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_producer_instance</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_producer_instance</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_producer_instance</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_producer_instance</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, WILLIAM R. (wisrovi).</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
