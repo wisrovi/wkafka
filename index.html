@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wkafka v1.0.6 | Enterprise-Grade Python Kafka Orchestrator Suite</title>
+
+    <!-- SEO & Meta Tags -->
+    <meta name="description" content="wkafka v1.0.6: The most resilient, decorator-based Python Kafka library. Built-in support for JSON, OpenCV real-time image matrix streaming, Pydantic validation, partition auto-scaling, and 96% test coverage.">
+    <meta name="keywords" content="python, kafka, wkafka, streaming, opencv, vision, pydantic, snappy, microservices, wpipe, wisrovi">
+    <meta name="author" content="William Steve Rodriguez Villamizar (wisrovi)">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="wkafka — Enterprise-Grade Python Kafka Orchestrator Suite">
+    <meta property="og:description" content="Decorator-based Kafka triggers, real-time vision matrix streaming, partition auto-scaling, and Pydantic validation. Zero boilerplate.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wisrovi.github.io/wkafka/">
+    <meta property="og:site_name" content="wkafka">
+
+    <!-- Favicon (Procedural SVG) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%2300f2fe'/><stop offset='100%25' style='stop-color:%234facfe'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><text x='50' y='68' font-size='50' font-weight='bold' text-anchor='middle' fill='white'>K</text></svg>">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --primary-glow: rgba(0, 242, 254, 0.4);
+            --secondary: #4facfe;
+            --secondary-glow: rgba(79, 172, 254, 0.4);
+            --accent: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg-deep: #020617;
+            --bg-card: rgba(15, 23, 42, 0.6);
+            --bg-card-hover: rgba(30, 41, 59, 0.8);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --text-muted: #64748b;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(0, 242, 254, 0.3);
+
+            --gradient-linear: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            --gradient-mesh: radial-gradient(at 0% 0%, hsla(180, 100%, 50%, 0.15) 0, transparent 50%),
+                             radial-gradient(at 100% 100%, hsla(210, 100%, 50%, 0.15) 0, transparent 50%);
+            --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+
+            --shadow-neo: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+            --shadow-glow: 0 0 30px var(--primary-glow);
+            --container-max: 1200px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: var(--gradient-mesh);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: var(--container-max); margin: 0 auto; padding: 0 2rem; }
+        section { padding: 90px 0; position: relative; }
+
+        h1, h2, h3, h4 { font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+        .gradient-text {
+            background: var(--gradient-linear);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        nav {
+            position: fixed;
+            top: 0; width: 100%;
+            z-index: 1000;
+            background: rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+        .logo-box {
+            width: 38px; height: 38px;
+            background: var(--gradient-linear);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: #020617; font-weight: 900; font-size: 1.2rem;
+            box-shadow: var(--shadow-glow);
+        }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-weight: 600; font-size: 0.95rem;
+            transition: var(--transition);
+        }
+        .nav-links a:hover { color: var(--primary); }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 12px 26px; border-radius: 12px;
+            font-weight: 700; font-size: 0.95rem;
+            text-decoration: none; transition: var(--transition);
+            cursor: pointer; border: none;
+        }
+        .btn-primary {
+            background: var(--gradient-linear);
+            color: #020617;
+            box-shadow: var(--shadow-glow);
+        }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--primary); }
+
+        .hero { padding-top: 160px; padding-bottom: 80px; text-align: center; }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 16px; border-radius: 30px;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid var(--border-highlight);
+            color: var(--primary); font-size: 0.85rem; font-weight: 700;
+            margin-bottom: 24px;
+        }
+        .hero h1 { font-size: 3.8rem; margin-bottom: 24px; }
+        .hero p {
+            font-size: 1.25rem; color: var(--text-dim);
+            max-width: 780px; margin: 0 auto 36px; font-weight: 400;
+        }
+        .hero-buttons { display: flex; justify-content: center; gap: 16px; margin-bottom: 48px; }
+
+        .badges-row {
+            display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+        }
+        .badges-row img { height: 26px; }
+
+        .grid-3 {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px; padding: 32px;
+            transition: var(--transition);
+            backdrop-filter: blur(12px);
+        }
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-highlight);
+            transform: translateY(-4px);
+        }
+        .card-icon {
+            width: 52px; height: 52px; border-radius: 14px;
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--primary); font-size: 1.5rem;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+        }
+        .card h3 { font-size: 1.3rem; margin-bottom: 12px; }
+        .card p { color: var(--text-dim); font-size: 0.95rem; }
+
+        /* Code Tabs Showcase */
+        .code-showcase {
+            background: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 24px; overflow: hidden;
+            box-shadow: var(--shadow-neo);
+        }
+        .tab-buttons {
+            display: flex; background: rgba(0, 0, 0, 0.4);
+            border-bottom: 1px solid var(--border); overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 16px 24px; background: none; border: none;
+            color: var(--text-dim); font-weight: 600; font-size: 0.9rem;
+            cursor: pointer; transition: var(--transition);
+            white-space: nowrap; border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: rgba(0, 242, 254, 0.05);
+        }
+        .code-container { padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
+        .code-panel { display: none; }
+        .code-panel.active { display: block; }
+
+        pre { color: #e2e8f0; line-height: 1.5; overflow-x: auto; }
+        .kw { color: #ff79c6; font-weight: bold; }
+        .func { color: #50fa7b; }
+        .str { color: #f1fa8c; }
+        .dec { color: #bd93f9; }
+        .com { color: #6272a4; font-style: italic; }
+
+        /* Table */
+        .table-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px; overflow-x: auto;
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 16px 24px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        th { background: rgba(0, 0, 0, 0.3); color: var(--text-main); font-weight: 700; }
+        td { color: var(--text-dim); }
+        .status-tag {
+            display: inline-block; padding: 4px 10px; border-radius: 20px;
+            font-size: 0.8rem; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: var(--success);
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 0; text-align: center; color: var(--text-muted); font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="container nav-content">
+            <a href="#" class="logo">
+                <div class="logo-box">K</div>
+                WKafka
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#showcase">Code Examples</a></li>
+                <li><a href="#examples-status">14 Tested Examples</a></li>
+                <li><a href="#tech">Technologies</a></li>
+                <li><a href="./docs/index.html">Sphinx Docs</a></li>
+            </ul>
+            <a href="https://github.com/wisrovi/wkafka" target="_blank" class="btn btn-secondary">
+                <i class="fab fa-github"></i> GitHub
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge">
+                <i class="fas fa-rocket"></i> v1.0.6 LTS Released with 96% Guaranteed Coverage
+            </div>
+            <h1>Enterprise-Grade <span class="gradient-text">Python Kafka</span> Suite</h1>
+            <p>Orchestrate high-throughput streaming microservices with decorator-based triggers, real-time vision matrix decoders, partition auto-scaling, and Snappy compression.</p>
+
+            <div class="hero-buttons">
+                <a href="#showcase" class="btn btn-primary"><i class="fas fa-code"></i> Explore Examples</a>
+                <a href="./docs/index.html" class="btn btn-secondary"><i class="fas fa-book"></i> Sphinx API Docs</a>
+                <a href="https://pypi.org/project/wkafka/" target="_blank" class="btn btn-secondary"><i class="fas fa-box"></i> PyPI Package</a>
+            </div>
+
+            <div class="badges-row">
+                <img src="https://img.shields.io/pypi/v/wkafka?color=00f2fe" alt="PyPI">
+                <img src="https://img.shields.io/pypi/pyversions/wkafka" alt="Python">
+                <img src="https://img.shields.io/badge/Coverage-96%25-success.svg" alt="Coverage">
+                <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Features Section -->
+    <section id="features">
+        <div class="container">
+            <h2 style="text-align: center; margin-bottom: 48px; font-size: 2.4rem;">
+                Engineered for <span class="gradient-text">Performance & Resiliency</span>
+            </h2>
+            <div class="grid-3">
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-bolt"></i></div>
+                    <h3>Decorator Triggers</h3>
+                    <p>Register topic consumers in seconds with clean <code>@kafka.consumer(topic="...", format="json")</code> decorators.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-eye"></i></div>
+                    <h3>Vision Matrix Streaming</h3>
+                    <p>Native OpenCV/PIL image matrix serialization with JPEG quality control and automatic NumPy array reconstruction.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3>Partition Auto-Scaling</h3>
+                    <p>Dynamic partition scaling using <code>partition_scale=True</code> guarantees true 1:1 consumer-to-partition parallelism.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-compress-alt"></i></div>
+                    <h3>Snappy Compression</h3>
+                    <p>Recommended <code>wkafka[snappy]</code> integration for low-CPU high-throughput real-time video streaming.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h3>DLQ & Auto-Retries</h3>
+                    <p>Configurable <code>max_retries</code>, backoff delays, and automatic Dead Letter Queue routing on failure.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-cubes"></i></div>
+                    <h3>WPipe Architecture</h3>
+                    <p>Seamless integration into WPipe pipelines (<code>dto/</code>, <code>states/</code>, <code>main.py</code>) with forensic <code>tracking_db</code>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Code Showcase -->
+    <section id="showcase">
+        <div class="container">
+            <h2 style="text-align: center; margin-bottom: 16px; font-size: 2.4rem;">
+                Live Code <span class="gradient-text">Showcase</span>
+            </h2>
+            <p style="text-align: center; color: var(--text-dim); margin-bottom: 40px;">Select a tab below to inspect production-ready WKafka patterns:</p>
+
+            <div class="code-showcase">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab(0)">1. Basic JSON</button>
+                    <button class="tab-btn" onclick="switchTab(1)">2. Image Vision Streaming</button>
+                    <button class="tab-btn" onclick="switchTab(2)">3. Pydantic Validation</button>
+                    <button class="tab-btn" onclick="switchTab(3)">4. Partition Scaling</button>
+                    <button class="tab-btn" onclick="switchTab(4)">5. WPipe Pipeline</button>
+                </div>
+                <div class="code-container">
+                    <!-- Tab 0 -->
+                    <div class="code-panel active">
+<pre><code><span class="kw">from</span> wkafka <span class="kw">import</span> WKafka
+
+kafka = WKafka(bootstrap_servers=<span class="str">"localhost:29092"</span>, client_id=<span class="str">"json_app"</span>)
+
+<span class="dec">@kafka.consumer</span>(topic=<span class="str">"orders"</span>, format=<span class="str">"json"</span>)
+<span class="kw">def</span> <span class="func">on_order</span>(msg):
+    print(f<span class="str">"📦 Received order #{msg.value['id']}: {msg.value['item']}"</span>)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    kafka.send(<span class="str">"orders"</span>, value={<span class="str">"id"</span>: 101, <span class="str">"item"</span>: <span class="str">"Laptop GPU"</span>})
+    kafka.run_consumers(block=<span class="kw">True</span>)</code></pre>
+                    </div>
+                    <!-- Tab 1 -->
+                    <div class="code-panel">
+<pre><code><span class="kw">import</span> cv2
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> wkafka <span class="kw">import</span> WKafka
+
+kafka = WKafka(bootstrap_servers=<span class="str">"localhost:29092"</span>)
+
+<span class="dec">@kafka.consumer</span>(topic=<span class="str">"video_frames"</span>, format=<span class="str">"image"</span>)
+<span class="kw">def</span> <span class="func">process_frame</span>(msg):
+    frame = msg.value  <span class="com"># Decoded NumPy ndarray (BGR)</span>
+    print(f<span class="str">"🎥 Vision Frame Received: shape={frame.shape}"</span>)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    kafka.send(<span class="str">"video_frames"</span>, value=blank_frame, format=<span class="str">"image"</span>, quality=80)
+    kafka.run_consumers(block=<span class="kw">True</span>)</code></pre>
+                    </div>
+                    <!-- Tab 2 -->
+                    <div class="code-panel">
+<pre><code><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+<span class="kw">from</span> wkafka <span class="kw">import</span> WKafka
+
+<span class="kw">class</span> <span class="func">UserEvent</span>(BaseModel):
+    user_id: int
+    username: str
+    active: bool = <span class="kw">True</span>
+
+kafka = WKafka(bootstrap_servers=<span class="str">"localhost:29092"</span>)
+
+<span class="dec">@kafka.consumer</span>(topic=<span class="str">"users"</span>, format=<span class="str">"pydantic"</span>, model=UserEvent)
+<span class="kw">def</span> <span class="func">on_user</span>(msg):
+    user: UserEvent = msg.value
+    print(f<span class="str">"👤 Validated User: {user.username} (ID: {user.user_id})"</span>)</code></pre>
+                    </div>
+                    <!-- Tab 3 -->
+                    <div class="code-panel">
+<pre><code><span class="kw">from</span> wkafka <span class="kw">import</span> WKafka
+
+kafka = WKafka(bootstrap_servers=<span class="str">"localhost:29092"</span>, partition_scale=<span class="kw">True</span>)
+
+<span class="dec">@kafka.consumer</span>(topic=<span class="str">"high_load_topic"</span>, format=<span class="str">"json"</span>)
+<span class="kw">def</span> <span class="func">worker_1</span>(msg):
+    print(<span class="str">"Worker 1 processing partition event..."</span>)
+
+<span class="dec">@kafka.consumer</span>(topic=<span class="str">"high_load_topic"</span>, format=<span class="str">"json"</span>)
+<span class="kw">def</span> <span class="func">worker_2</span>(msg):
+    print(<span class="str">"Worker 2 processing partition event..."</span>)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    <span class="com"># Automatically creates or scales topic to 2 partitions for 1:1 true parallelism</span>
+    kafka.run_consumers(block=<span class="kw">True</span>, partition_scale=<span class="kw">True</span>)</code></pre>
+                    </div>
+                    <!-- Tab 4 -->
+                    <div class="code-panel">
+<pre><code><span class="kw">from</span> wpipe <span class="kw">import</span> Pipeline, step, to_obj
+<span class="kw">from</span> wkafka <span class="kw">import</span> WKafka
+<span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+
+<span class="kw">class</span> <span class="func">StreamContext</span>(BaseModel):
+    token: str
+    status: str = <span class="str">"pending"</span>
+
+<span class="dec">@step</span>(name=<span class="str">"KafkaStep"</span>, version=<span class="str">"v1.0"</span>)
+<span class="kw">class</span> <span class="func">KafkaConsumerStep</span>:
+    <span class="kw">def</span> <span class="func">__init__</span>(self):
+        self.kafka = WKafka(bootstrap_servers=<span class="str">"localhost:29092"</span>)
+
+    <span class="dec">@to_obj</span>(StreamContext)
+    <span class="kw">def</span> <span class="func">__call__</span>(self, ctx: StreamContext) -> StreamContext:
+        ctx.status = <span class="str">"processed_via_kafka"</span>
+        <span class="kw">return</span> ctx
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    pipeline = Pipeline(pipeline_name=<span class="str">"wkafka_pipeline"</span>, tracking_db=<span class="str">"tracking.db"</span>)
+    pipeline.set_steps([KafkaConsumerStep()])
+    pipeline.run({<span class="str">"token"</span>: <span class="str">"tx_99"</span>})</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 14 Tested Examples Table -->
+    <section id="examples-status">
+        <div class="container">
+            <h2 style="text-align: center; margin-bottom: 16px; font-size: 2.4rem;">
+                14 Production <span class="gradient-text">Verified Examples</span>
+            </h2>
+            <p style="text-align: center; color: var(--text-dim); margin-bottom: 40px;">All examples tested live against localhost:29092 broker without mocks (<code>EXAMPLES_STATUS.md</code>):</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Example Module</th>
+                            <th>Description</th>
+                            <th>Send Status</th>
+                            <th>Receive Status</th>
+                            <th>Final Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>01_basic/simple_json.py</code></td>
+                            <td>Basic JSON payload transmission</td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td>🟢 VERIFIED LIVE</td>
+                        </tr>
+                        <tr>
+                            <td><code>03_multimedia/image_streaming.py</code></td>
+                            <td>OpenCV real-time BGR frame encoding</td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td>🟢 VERIFIED LIVE</td>
+                        </tr>
+                        <tr>
+                            <td><code>07_files/file_streaming.py</code></td>
+                            <td>Binary PDF and raw document streaming</td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td>🟢 VERIFIED LIVE</td>
+                        </tr>
+                        <tr>
+                            <td><code>09_retries_and_dlq/dlq_example.py</code></td>
+                            <td>Backoff retries and DLQ routing</td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td>🟢 VERIFIED LIVE</td>
+                        </tr>
+                        <tr>
+                            <td><code>12_pydantic_validation/pydantic_example.py</code></td>
+                            <td>Typed Pydantic v2 model validation</td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td>🟢 VERIFIED LIVE</td>
+                        </tr>
+                        <tr>
+                            <td><code>13_partition_scale/partition_scale_example.py</code></td>
+                            <td>KafkaAdminClient auto-partition scaling</td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td><span class="status-tag">OK</span></td>
+                            <td>🟢 VERIFIED LIVE</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Required Technologies Section -->
+    <section id="tech">
+        <div class="container">
+            <h2 style="text-align: center; margin-bottom: 48px; font-size: 2.4rem;">
+                🛠️ Tecnologías y Librerías Relevantes
+            </h2>
+            <div class="grid-3">
+                <div class="card">
+                    <h3>Python 3.9 - 3.14</h3>
+                    <p>Full multi-version compatibility and native typing annotations.</p>
+                </div>
+                <div class="card">
+                    <h3>kafka-python-ng</h3>
+                    <p>Asynchronous low-latency Kafka client core for event ingestion.</p>
+                </div>
+                <div class="card">
+                    <h3>OpenCV & Pillow</h3>
+                    <p>Real-time image array serialization and matrix decoding.</p>
+                </div>
+                <div class="card">
+                    <h3>Pydantic (v2)</h3>
+                    <p>Strongly-typed schema validation and deserialization.</p>
+                </div>
+                <div class="card">
+                    <h3>python-snappy</h3>
+                    <p>High-throughput CPU-efficient streaming compression algorithm.</p>
+                </div>
+                <div class="card">
+                    <h3>Pytest & Docker</h3>
+                    <p>Automated test runner in Docker containers with 96% guaranteed coverage.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>WKafka v1.0.6 Suite | Maintained by <strong>WILLIAM R. (wisrovi)</strong> | AI Leader & Solutions Architect</p>
+        </div>
+    </footer>
+
+    <script>
+        function switchTab(index) {
+            const btns = document.querySelectorAll('.tab-btn');
+            const panels = document.querySelectorAll('.code-panel');
+
+            btns.forEach((btn, i) => {
+                if (i === index) {
+                    btn.classList.add('active');
+                    panels[i].classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                    panels[i].classList.remove('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
