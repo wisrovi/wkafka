@@ -1,1 +1,1 @@
-from .wkafka import Wkafka, Consumer_data
+from .wkafka import Wkafka

@@ -1,0 +1,41 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: external-user
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operations:
+          - All
+        host: "*"
+      - resource:
+          type: group
+          name: "*"
+          patternType: literal
+        operations:
+          - All
+        host: "*"
+      - resource:
+          type: transactionalId
+          name: "*"
+          patternType: literal
+        operations:
+          - All
+        host: "*"
+---
+# Connection info:
+# Bootstrap: 192.168.20.50:30092, 192.168.20.51:30092
+# Username: external-user
+# Password: mdL0Q9gKAANuglBV8KaGvPYS6NihQP5u
+# SASL Mechanism: SCRAM-SHA-512
+# Security Protocol: SASL_PLAINTEXT
