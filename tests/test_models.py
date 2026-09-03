@@ -23,7 +23,7 @@ def test_message_attributes_and_header_alias():
         key="key1",
         headers=headers_dict,
     )
-    
+
     assert msg.value == {"foo": "bar"}
     assert msg.topic == "test_topic"
     assert msg.group_id == "test_group"
