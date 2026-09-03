@@ -1,3 +1,5 @@
+"""WKafka package initialization module."""
+
 import sys
 from wkafka.core.manager import WKafka
 from wkafka.core.models import Message
@@ -11,5 +13,3 @@ __all__ = ["WKafka", "Message", "Wkafka", "wkafka"]
 
 # Alias for backward compatibility if needed, promoting WKafka (CamelCase)
 Wkafka = WKafka
-
-
