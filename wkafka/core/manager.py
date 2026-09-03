@@ -176,6 +176,13 @@ class WKafka:
             }
             config.update(kafka_kwargs)
 
+            other_cfg = config.pop("other_config", None)
+            if isinstance(other_cfg, dict):
+                config.update(other_cfg)
+
+            config.pop("value_type", None)
+            config.pop("value_convert_to", None)
+
             for k, v in self.extra_config.items():
                 if k not in kafka_kwargs:
                     config[k] = v
