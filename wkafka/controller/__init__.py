@@ -1,3 +1,5 @@
-from .wkafka import Wkafka, Consumer_data
+from .wkafka import Wkafka
+from wkafka.core.models import Message as Consumer_data
 
 __all__ = ["Wkafka", "Consumer_data"]
+
