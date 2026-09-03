@@ -60,7 +60,7 @@ class Wkafka(WKafka):
         header: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        data_format = value_type or value_convert_to or "json"
+        data_format = value_type or value_convert_to or kwargs.pop("format", None) or "json"
         final_headers = headers or header
         return super().send(
             topic=topic,
