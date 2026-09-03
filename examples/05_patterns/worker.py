@@ -7,7 +7,11 @@ kafka = WKafka(dynamic_group_id=True)
 def process_request(msg):
     print(f"⚙️ Procesando ID {msg.value['id']}...")
     with kafka.producer() as p:
-        p.send("response_topic", value={"id": msg.value["id"], "status": "OK"}, format="json")
+        p.send(
+            "response_topic",
+            value={"id": msg.value["id"], "status": "OK"},
+            format="json",
+        )
 
 
 if __name__ == "__main__":
