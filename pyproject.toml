@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wkafka"
-version = "1.1.4"
+version = "1.1.5"
 description = "A professional, decorator-based Kafka wrapper for Python with built-in support for multimedia and JSON."
 authors = ["William Steve Rodriguez Villamizar <wisrovi.rodriguez@gmail.com>"]
 license = "MIT"
