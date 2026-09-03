@@ -63,6 +63,10 @@ class WKafka:
         self._producer_instance: Optional[KafkaProducer] = None
         self._lock = threading.Lock()
 
+    @property
+    def consumers(self) -> List[Tuple[KafkaConsumer, Callable, Dict[str, Any]]]:
+        return self._consumers_registry
+
     def _ensure_partitions(self, topic: str, target_count: int) -> None:
         """Dynamically scales the partition count of a topic to target_count using KafkaAdminClient."""
         try:
