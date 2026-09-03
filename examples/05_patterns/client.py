@@ -12,7 +12,9 @@ def handle_response(msg):
 
 
 if __name__ == "__main__":
-    threading.Thread(target=lambda: kafka.run_consumers(block=True), daemon=True).start()
+    threading.Thread(
+        target=lambda: kafka.run_consumers(block=True), daemon=True
+    ).start()
     with kafka.producer() as p:
         p.send("request_topic", value={"id": 123}, format="json")
     print("📨 Solicitud enviada, esperando respuesta...")
