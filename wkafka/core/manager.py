@@ -1,3 +1,5 @@
+"""Core manager module for WKafka orchestrating consumers and producers."""
+
 import asyncio
 import concurrent.futures
 import inspect
@@ -25,9 +27,7 @@ _LOG_CONFIGURED = False
 
 
 class WKafka:
-    """
-    The main orchestrator for Kafka production and consumption.
-    """
+    """The main orchestrator for Kafka production and consumption."""
 
     _SERIALIZERS = {
         "json": JSONSerializer(),
@@ -45,6 +45,7 @@ class WKafka:
         partition_scale: bool = False,
         **extra_config: Any,
     ):
+        """Initializes WKafka manager instance with specified configurations."""
         global _LOG_CONFIGURED
         if not _LOG_CONFIGURED:
             logger.add("wkafka.log", rotation="10 MB", level="INFO")
@@ -65,60 +66,96 @@ class WKafka:
 
     @property
     def consumers(self) -> List[Tuple[KafkaConsumer, Callable, Dict[str, Any]]]:
+        """Returns the registered consumers."""
         return self._consumers_registry
 
-    def _ensure_partitions(self, topic: str, target_count: int) -> None:
-        """Dynamically scales the partition count of a topic to target_count using KafkaAdminClient."""
-        try:
-            from kafka.admin import KafkaAdminClient, NewPartitions, NewTopic
+    def _ensure_partitions(
+        self, topic: str, target_count: int, max_retries: int = 3
+    ) -> None:
+        """Dynamically scales the partition count of a topic to target_count using KafkaAdminClient with retries."""
+        from kafka.admin import KafkaAdminClient, NewPartitions, NewTopic
+        from kafka.errors import (
+            NoBrokersAvailable,
+            NodeNotReadyError,
+            UnknownTopicOrPartitionError,
+        )
 
-            admin_config = {
-                "bootstrap_servers": self.bootstrap_servers,
-                "client_id": f"{self.client_id}-admin",
-            }
-            for k in (
-                "security_protocol",
-                "sasl_mechanism",
-                "sasl_plain_username",
-                "sasl_plain_password",
-            ):
-                if k in self.extra_config:
-                    admin_config[k] = self.extra_config[k]
+        admin_config = {
+            "bootstrap_servers": self.bootstrap_servers,
+            "client_id": f"{self.client_id}-admin",
+        }
+        for k in (
+            "security_protocol",
+            "sasl_mechanism",
+            "sasl_plain_username",
+            "sasl_plain_password",
+        ):
+            if k in self.extra_config:
+                admin_config[k] = self.extra_config[k]
 
-            admin = KafkaAdminClient(**admin_config)
+        last_exception: Optional[Exception] = None
+        for attempt in range(max_retries):
             try:
-                consumer_temp = KafkaConsumer(
-                    topic, bootstrap_servers=self.bootstrap_servers, **self.extra_config
-                )
-                partitions = consumer_temp.partitions_for_topic(topic)
-                consumer_temp.close()
+                admin = KafkaAdminClient(**admin_config)
+                try:
+                    partitions_count: Optional[int] = None
+                    try:
+                        desc = admin.describe_topics([topic])
+                        if desc and isinstance(desc, list) and len(desc) > 0:
+                            topic_info = desc[0]
+                            if (
+                                isinstance(topic_info, dict)
+                                and topic_info.get("error_code") == 0
+                            ):
+                                partitions_count = len(topic_info.get("partitions", []))
+                    except (UnknownTopicOrPartitionError, Exception):
+                        partitions_count = None
 
-                if partitions is None:
-                    logger.info(
-                        f"🚀 [PARTITION SCALE] Creating topic '{topic}' with {target_count} initial partitions."
-                    )
-                    admin.create_topics(
-                        [
-                            NewTopic(
-                                name=topic,
-                                num_partitions=target_count,
-                                replication_factor=1,
+                    # Fallback to consumer if describe_topics returns None or is unhandled by mock
+                    if partitions_count is None:
+                        try:
+                            consumer_temp = KafkaConsumer(
+                                topic,
+                                bootstrap_servers=self.bootstrap_servers,
+                                **self.extra_config,
                             )
-                        ]
-                    )
-                else:
-                    current_count = len(partitions)
-                    if current_count < target_count:
+                            partitions = consumer_temp.partitions_for_topic(topic)
+                            consumer_temp.close()
+                            if partitions is not None:
+                                partitions_count = len(partitions)
+                        except Exception:
+                            partitions_count = None
+
+                    if partitions_count is None:
                         logger.info(
-                            f"🚀 [PARTITION SCALE] Auto-scaling topic '{topic}' partitions from {current_count} to {target_count}."
+                            f"🚀 [PARTITION SCALE] Creating topic '{topic}' with {target_count} initial partitions."
+                        )
+                        admin.create_topics(
+                            [
+                                NewTopic(
+                                    name=topic,
+                                    num_partitions=target_count,
+                                    replication_factor=1,
+                                )
+                            ]
+                        )
+                    elif partitions_count < target_count:
+                        logger.info(
+                            f"🚀 [PARTITION SCALE] Auto-scaling topic '{topic}' partitions from {partitions_count} to {target_count}."
                         )
                         admin.create_partitions(
                             {topic: NewPartitions(total_count=target_count)}
                         )
-            finally:
-                admin.close()
-        except Exception as e:
-            logger.warning(f"Could not auto-scale partitions for topic '{topic}': {e}")
+                    return
+                finally:
+                    admin.close()
+            except (NodeNotReadyError, NoBrokersAvailable, Exception) as e:
+                if attempt < max_retries - 1:
+                    time.sleep(0.2 * (attempt + 1))
+                else:
+                    logger.warning(
+                        f"Could not auto-scale partitions for topic '{topic}' after {max_retries} attempts: {e}"
+                    )
 
     def _generate_group_id(self) -> str:
         return (
@@ -169,6 +206,8 @@ class WKafka:
         partition_scale: Optional[bool] = None,
         **kafka_kwargs: Any,
     ) -> Callable:
+        """Decorator to register a function as a Kafka consumer handler."""
+
         def decorator(func: Callable) -> Callable:
             final_group_id = group_id or self._generate_group_id()
 
@@ -201,7 +240,11 @@ class WKafka:
 
             consumer_instance = KafkaConsumer(*topics_args, **config)
 
-            fmt = kafka_kwargs.get("value_type") or kafka_kwargs.get("value_convert_to") or format
+            fmt = (
+                kafka_kwargs.get("value_type")
+                or kafka_kwargs.get("value_convert_to")
+                or format
+            )
             options = {
                 "key_filter": key_filter,
                 "format": fmt,
@@ -344,6 +387,7 @@ class WKafka:
     def run_consumers(
         self, block: bool = True, partition_scale: Optional[bool] = None, **kwargs: Any
     ) -> None:
+        """Starts executing all registered consumer handlers in parallel worker threads."""
         if not self._consumers_registry:
             logger.warning("No consumers registered. Nothing to run.")
             return
@@ -354,7 +398,7 @@ class WKafka:
 
         if should_auto_scale:
             topic_counts: Dict[str, int] = {}
-            for consumer_inst, func, options in self._consumers_registry:
+            for consumer_inst, _func, _options in self._consumers_registry:
                 topics = consumer_inst.subscription() or []
                 for t in topics:
                     topic_counts[t] = topic_counts.get(t, 0) + 1
@@ -389,6 +433,7 @@ class WKafka:
         headers: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
+        """Sends a message to the specified Kafka topic using the configured serializer."""
         producer = self._get_producer()
 
         if format in self._SERIALIZERS:
@@ -407,12 +452,15 @@ class WKafka:
         )
 
     def producer(self) -> "WKafka":
+        """Returns self as producer context manager."""
         return self
 
     def __enter__(self) -> "WKafka":
+        """Enters producer context manager."""
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exits producer context manager flushing pending messages."""
         if self._producer_instance:
             self._producer_instance.flush()
             self._producer_instance.close()
