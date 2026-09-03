@@ -300,19 +300,24 @@ class WKafka:
             headers = {}
             if raw_msg.headers:
                 for k, v in raw_msg.headers:
+                    k_str = k.decode("utf-8") if isinstance(k, bytes) else str(k)
                     try:
                         val_str = v.decode("utf-8") if isinstance(v, bytes) else str(v)
-                        if k == "metadata":
+                        if k_str == "metadata":
                             try:
                                 meta_dict = json.loads(val_str)
                                 if isinstance(meta_dict, dict):
                                     headers.update(meta_dict)
                             except Exception:
-                                headers[k] = val_str
+                                headers[k_str] = val_str
                         else:
-                            headers[k] = val_str
+                            try:
+                                parsed_json = json.loads(val_str)
+                                headers[k_str] = parsed_json
+                            except Exception:
+                                headers[k_str] = val_str
                     except Exception:
-                        headers[k] = v
+                        headers[k_str] = v
 
             value = raw_msg.value
             if data_format in self._SERIALIZERS:
@@ -444,7 +449,12 @@ class WKafka:
         kafka_headers = []
         if headers:
             for k, v in headers.items():
-                val = v if isinstance(v, bytes) else str(v).encode("utf-8")
+                if isinstance(v, bytes):
+                    val = v
+                elif isinstance(v, (dict, list)):
+                    val = json.dumps(v, default=lambda o: vars(o) if hasattr(o, "__dict__") else str(o)).encode("utf-8")
+                else:
+                    val = str(v).encode("utf-8")
                 kafka_headers.append((k, val))
 
         return producer.send(
