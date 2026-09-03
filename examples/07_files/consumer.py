@@ -29,7 +29,9 @@ def receive_file(msg):
     with open(out_path, "wb") as f:
         f.write(file_bytes)
 
-    print(f"📥 Received file -> Saved '{filename}' ({len(file_bytes)} bytes) to '{out_path}'")
+    print(
+        f"📥 Received file -> Saved '{filename}' ({len(file_bytes)} bytes) to '{out_path}'"
+    )
 
 
 if __name__ == "__main__":
