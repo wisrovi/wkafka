@@ -24,7 +24,9 @@ def main():
     with kafka.producer() as producer:
         while True:
             try:
-                msg_input = input(f"\n[{topic}] Enter message payload (text or JSON): ").strip()
+                msg_input = input(
+                    f"\n[{topic}] Enter message payload (text or JSON): "
+                ).strip()
                 if msg_input.lower() in ("exit", "quit"):
                     print("👋 Exiting interactive producer.")
                     sys.exit(0)
@@ -40,7 +42,9 @@ def main():
                     payload = msg_input
                     fmt = "json"
 
-                key_input = input(f"[{topic}] Enter optional message key (press ENTER to skip): ").strip()
+                key_input = input(
+                    f"[{topic}] Enter optional message key (press ENTER to skip): "
+                ).strip()
                 key = key_input if key_input else None
 
                 producer.send(topic, value=payload, key=key, format=fmt)
