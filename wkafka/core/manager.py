@@ -57,7 +57,9 @@ class WKafka:
         self.dynamic_group_id = dynamic_group_id
         self.partition_scale = partition_scale
         self.extra_config = extra_config
-        self._consumers_registry: List[Tuple[KafkaConsumer, Callable, Dict[str, Any]]] = []
+        self._consumers_registry: List[
+            Tuple[KafkaConsumer, Callable, Dict[str, Any]]
+        ] = []
         self._producer_instance: Optional[KafkaProducer] = None
         self._lock = threading.Lock()
 
@@ -65,17 +67,25 @@ class WKafka:
         """Dynamically scales the partition count of a topic to target_count using KafkaAdminClient."""
         try:
             from kafka.admin import KafkaAdminClient, NewPartitions, NewTopic
+
             admin_config = {
                 "bootstrap_servers": self.bootstrap_servers,
                 "client_id": f"{self.client_id}-admin",
             }
-            for k in ("security_protocol", "sasl_mechanism", "sasl_plain_username", "sasl_plain_password"):
+            for k in (
+                "security_protocol",
+                "sasl_mechanism",
+                "sasl_plain_username",
+                "sasl_plain_password",
+            ):
                 if k in self.extra_config:
                     admin_config[k] = self.extra_config[k]
 
             admin = KafkaAdminClient(**admin_config)
             try:
-                consumer_temp = KafkaConsumer(topic, bootstrap_servers=self.bootstrap_servers, **self.extra_config)
+                consumer_temp = KafkaConsumer(
+                    topic, bootstrap_servers=self.bootstrap_servers, **self.extra_config
+                )
                 partitions = consumer_temp.partitions_for_topic(topic)
                 consumer_temp.close()
 
@@ -83,21 +93,35 @@ class WKafka:
                     logger.info(
                         f"🚀 [PARTITION SCALE] Creating topic '{topic}' with {target_count} initial partitions."
                     )
-                    admin.create_topics([NewTopic(name=topic, num_partitions=target_count, replication_factor=1)])
+                    admin.create_topics(
+                        [
+                            NewTopic(
+                                name=topic,
+                                num_partitions=target_count,
+                                replication_factor=1,
+                            )
+                        ]
+                    )
                 else:
                     current_count = len(partitions)
                     if current_count < target_count:
                         logger.info(
                             f"🚀 [PARTITION SCALE] Auto-scaling topic '{topic}' partitions from {current_count} to {target_count}."
                         )
-                        admin.create_partitions({topic: NewPartitions(total_count=target_count)})
+                        admin.create_partitions(
+                            {topic: NewPartitions(total_count=target_count)}
+                        )
             finally:
                 admin.close()
         except Exception as e:
             logger.warning(f"Could not auto-scale partitions for topic '{topic}': {e}")
 
     def _generate_group_id(self) -> str:
-        return f"wkafka-{uuid.uuid4().hex[:8]}" if self.dynamic_group_id else "wkafka-default-group"
+        return (
+            f"wkafka-{uuid.uuid4().hex[:8]}"
+            if self.dynamic_group_id
+            else "wkafka-default-group"
+        )
 
     def _get_producer(self) -> KafkaProducer:
         with self._lock:
@@ -117,7 +141,9 @@ class WKafka:
                     "acks": int(os.environ.get("KAFKA_ACKS", "1")),
                     "compression_type": compression,
                     "value_serializer": lambda v: v,
-                    "key_serializer": lambda k: k.encode("utf-8") if isinstance(k, str) else k,
+                    "key_serializer": lambda k: (
+                        k.encode("utf-8") if isinstance(k, str) else k
+                    ),
                 }
                 producer_config.update(self.extra_config)
 
@@ -234,9 +260,7 @@ class WKafka:
                 except Exception as e:
                     logger.error(f"Failed to deserialize message in {data_format}: {e}")
 
-            commit_callback = (
-                (lambda: consumer.commit()) if not auto_commit else None
-            )
+            commit_callback = (lambda: consumer.commit()) if not auto_commit else None
 
             config_obj = getattr(consumer, "config", None)
             group_id = (
@@ -249,7 +273,11 @@ class WKafka:
                 topic=raw_msg.topic,
                 group_id=group_id,
                 offset=raw_msg.offset,
-                key=raw_msg.key.decode("utf-8") if raw_msg.key and isinstance(raw_msg.key, bytes) else raw_msg.key,
+                key=(
+                    raw_msg.key.decode("utf-8")
+                    if raw_msg.key and isinstance(raw_msg.key, bytes)
+                    else raw_msg.key
+                ),
                 headers=headers,
                 _commit_fn=commit_callback,
             )
@@ -270,7 +298,7 @@ class WKafka:
                         f"Consumer error (attempt {attempt + 1}/{max_retries + 1}): {e}"
                     )
                     if attempt < max_retries:
-                        time.sleep(retry_delay * (2 ** attempt))
+                        time.sleep(retry_delay * (2**attempt))
 
             if not success and dlq_topic:
                 logger.error(
@@ -292,12 +320,16 @@ class WKafka:
                 except Exception as dlq_err:
                     logger.error(f"Failed to route message to DLQ: {dlq_err}")
 
-    def run_consumers(self, block: bool = True, partition_scale: Optional[bool] = None) -> None:
+    def run_consumers(
+        self, block: bool = True, partition_scale: Optional[bool] = None
+    ) -> None:
         if not self._consumers_registry:
             logger.warning("No consumers registered. Nothing to run.")
             return
 
-        should_auto_scale = self.partition_scale if partition_scale is None else partition_scale
+        should_auto_scale = (
+            self.partition_scale if partition_scale is None else partition_scale
+        )
 
         if should_auto_scale:
             topic_counts: Dict[str, int] = {}
@@ -310,7 +342,8 @@ class WKafka:
                 self._ensure_partitions(topic, count)
 
         executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self._consumers_registry), thread_name_prefix="WKafkaConsumer"
+            max_workers=len(self._consumers_registry),
+            thread_name_prefix="WKafkaConsumer",
         )
 
         futures = []
@@ -348,7 +381,9 @@ class WKafka:
                 val = v if isinstance(v, bytes) else str(v).encode("utf-8")
                 kafka_headers.append((k, val))
 
-        return producer.send(topic, value=serialized_value, key=key, headers=kafka_headers)
+        return producer.send(
+            topic, value=serialized_value, key=key, headers=kafka_headers
+        )
 
     def producer(self) -> "WKafka":
         return self
