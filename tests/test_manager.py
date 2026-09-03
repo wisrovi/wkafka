@@ -6,7 +6,7 @@ consumer execution, retry policy logic, DLQ routing, async callbacks, partition 
 """
 
 from unittest import mock
-import pytest
+
 from wkafka import WKafka
 from wkafka.core.models import Message
 
@@ -303,13 +303,56 @@ def test_ensure_partitions_create_topic(mock_consumer_cls, mock_admin_cls):
 def test_ensure_partitions_exception():
     """
     Validates _ensure_partitions error handling when KafkaAdminClient raises an exception.
+    Ensures that retries exhaust gracefully and warning is logged without crashing the app.
     """
     kafka = WKafka(bootstrap_servers="localhost:9092")
     with mock.patch(
         "kafka.admin.KafkaAdminClient", side_effect=Exception("Admin error")
     ):
-        # Should log warning and not crash
-        kafka._ensure_partitions("test_topic", target_count=2)
+        # Should attempt retries, log warning and not crash
+        kafka._ensure_partitions("test_topic", target_count=2, max_retries=2)
+
+
+@mock.patch("kafka.admin.KafkaAdminClient")
+def test_ensure_partitions_describe_topics_success(mock_admin_cls):
+    """Validates _ensure_partitions when describe_topics succeeds directly.
+
+    Verifies that create_partitions is called and KafkaConsumer fallback is bypassed.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    mock_admin_inst = mock.MagicMock()
+    mock_admin_inst.describe_topics.return_value = [
+        {"error_code": 0, "topic": "test_topic", "partitions": [0]}
+    ]
+    mock_admin_cls.return_value = mock_admin_inst
+
+    kafka._ensure_partitions("test_topic", target_count=3, max_retries=1)
+    mock_admin_inst.create_partitions.assert_called_once()
+
+
+@mock.patch("kafka.admin.KafkaAdminClient")
+def test_ensure_partitions_retry_on_node_not_ready(mock_admin_cls):
+    """Validates _ensure_partitions retry mechanism when NodeNotReadyError is raised.
+
+    Succeeds on subsequent retry attempt.
+    """
+    from kafka.errors import NodeNotReadyError
+
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    mock_admin_inst = mock.MagicMock()
+    mock_admin_inst.describe_topics.return_value = [
+        {"error_code": 0, "topic": "test_topic", "partitions": [0]}
+    ]
+
+    # First call raises NodeNotReadyError, second call succeeds
+    mock_admin_cls.side_effect = [
+        NodeNotReadyError("Node not ready"),
+        mock_admin_inst,
+    ]
+
+    kafka._ensure_partitions("test_topic", target_count=2, max_retries=2)
+    assert mock_admin_cls.call_count == 2
+    mock_admin_inst.create_partitions.assert_called_once()
 
 
 def test_handle_message_key_filter_skip_and_header_decode_error():
