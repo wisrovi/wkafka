@@ -89,7 +89,9 @@ class FileSerializer(Serializer):
                 return f.read()
         if isinstance(value, dict) and "content" in value:
             content = value["content"]
-            return content if isinstance(content, bytes) else str(content).encode("utf-8")
+            return (
+                content if isinstance(content, bytes) else str(content).encode("utf-8")
+            )
         if isinstance(value, str):
             return value.encode("utf-8")
         raise TypeError(f"Expected file path, bytes or dict content, got {type(value)}")
