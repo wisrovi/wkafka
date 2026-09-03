@@ -6,7 +6,9 @@ sasl_config = {
     "sasl_plain_username": "external-user",
     "sasl_plain_password": "mdL0Q9gKAANuglBV8KaGvPYS6NihQP5u",
 }
-kafka = WKafka(bootstrap_servers="localhost:30092", dynamic_group_id=True, **sasl_config)
+kafka = WKafka(
+    bootstrap_servers="localhost:30092", dynamic_group_id=True, **sasl_config
+)
 
 
 @kafka.consumer(topic="secure_topic", format="json")
