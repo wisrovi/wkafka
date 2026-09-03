@@ -26,10 +26,10 @@ def test_json_serializer():
     """
     serializer = JSONSerializer()
     payload = {"id": 123, "name": "Kafka Test"}
-    
+
     encoded = serializer.serialize(payload)
     assert isinstance(encoded, bytes)
-    
+
     decoded = serializer.deserialize(encoded)
     assert decoded == payload
 
@@ -42,10 +42,10 @@ def test_yaml_serializer():
     """
     serializer = YAMLSerializer()
     payload = {"service": "worker", "replicas": 3}
-    
+
     encoded = serializer.serialize(payload)
     assert isinstance(encoded, bytes)
-    
+
     decoded = serializer.deserialize(encoded)
     assert decoded == payload
 
@@ -58,10 +58,10 @@ def test_image_serializer_numpy():
     """
     serializer = ImageSerializer()
     dummy_frame = np.zeros((100, 100, 3), dtype=np.uint8)
-    
+
     encoded = serializer.serialize(dummy_frame, quality=80)
     assert isinstance(encoded, bytes)
-    
+
     decoded = serializer.deserialize(encoded)
     assert isinstance(decoded, np.ndarray)
     assert decoded.shape == dummy_frame.shape
@@ -74,10 +74,10 @@ def test_image_serializer_pil():
     """
     serializer = ImageSerializer()
     pil_img = Image.new("RGB", (50, 50), color="red")
-    
+
     encoded = serializer.serialize(pil_img)
     assert isinstance(encoded, bytes)
-    
+
     decoded = serializer.deserialize(encoded)
     assert isinstance(decoded, np.ndarray)
     assert decoded.shape == (50, 50, 3)
@@ -96,10 +96,10 @@ def test_pydantic_serializer():
     """
     serializer = PydanticSerializer()
     user = UserSchema(user_id=42, username="alice")
-    
+
     encoded = serializer.serialize(user)
     assert isinstance(encoded, bytes)
-    
+
     decoded = serializer.deserialize(encoded, model=UserSchema)
     assert isinstance(decoded, UserSchema)
     assert decoded.user_id == 42
@@ -113,10 +113,10 @@ def test_file_serializer(tmp_path):
     """
     serializer = FileSerializer()
     test_bytes = b"Sample raw binary file data"
-    
+
     encoded = serializer.serialize(test_bytes)
     assert encoded == test_bytes
-    
+
     decoded = serializer.deserialize(encoded)
     assert decoded == test_bytes
 
@@ -139,6 +139,7 @@ def test_file_serializer(tmp_path):
     assert encoded_str == b"plain string content"
 
     import pytest
+
     with pytest.raises(TypeError):
         serializer.serialize(12345)
 
@@ -148,6 +149,7 @@ def test_image_serializer_errors():
     Validates ImageSerializer exception branches for invalid input types and decoding failures.
     """
     import pytest
+
     serializer = ImageSerializer()
 
     # Invalid input type
@@ -191,6 +193,7 @@ def test_pydantic_serializer_fallbacks():
         def parse_raw(cls, text):
             return {"parsed": text}
 
-    decoded_legacy_parse = serializer.deserialize(b'{"key": "val"}', model=LegacyParseModel)
+    decoded_legacy_parse = serializer.deserialize(
+        b'{"key": "val"}', model=LegacyParseModel
+    )
     assert decoded_legacy_parse == {"parsed": '{"key": "val"}'}
-
