@@ -17,8 +17,7 @@ WKafka simplifies Apache Kafka integration by providing a high-level, intuitive 
 - **Multimedia & File Native**: Seamlessly send and receive images (OpenCV/NumPy/PIL) and arbitrary files (PDF, ZIP, TXT) via `format="file"`.
 - **Type-safe Pydantic Validation**: Automatic schema validation with `format="pydantic"`.
 - **Manual Offset Commit**: Control At-Least-Once delivery semantics with `auto_commit=False` and `msg.commit()`.
-- **Retries & Dead Letter Queue**: Automatic exponential backoff retries and DLQ routing (`max_retries`, `dlq_topic`).
-- **Multi-Topic & Regex Subscription**: Subscribe to topic lists (`topic=["a", "b"]`) or patterns (`pattern="sensor_.*"`).
+- **Partition Auto-scaling & Retries**: Automatic topic partition scaling with `describe_topics` inspection and exponential backoff retry resilience against transient `NodeNotReadyError`.
 - **Async/Await Support**: Define non-blocking `async def` consumer handlers.
 - **Professional Ops**: Structured logging via `loguru` and multi-version testing with `tox`.
 
