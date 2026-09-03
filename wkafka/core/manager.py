@@ -246,7 +246,16 @@ class WKafka:
             if raw_msg.headers:
                 for k, v in raw_msg.headers:
                     try:
-                        headers[k] = v.decode("utf-8")
+                        val_str = v.decode("utf-8") if isinstance(v, bytes) else str(v)
+                        if k == "metadata":
+                            try:
+                                meta_dict = json.loads(val_str)
+                                if isinstance(meta_dict, dict):
+                                    headers.update(meta_dict)
+                            except Exception:
+                                headers[k] = val_str
+                        else:
+                            headers[k] = val_str
                     except Exception:
                         headers[k] = v
 
