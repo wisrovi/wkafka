@@ -305,7 +305,9 @@ def test_ensure_partitions_exception():
     Validates _ensure_partitions error handling when KafkaAdminClient raises an exception.
     """
     kafka = WKafka(bootstrap_servers="localhost:9092")
-    with mock.patch("kafka.admin.KafkaAdminClient", side_effect=Exception("Admin error")):
+    with mock.patch(
+        "kafka.admin.KafkaAdminClient", side_effect=Exception("Admin error")
+    ):
         # Should log warning and not crash
         kafka._ensure_partitions("test_topic", target_count=2)
 
@@ -413,4 +415,3 @@ def test_send_raw_format_and_bytes_headers():
     mock_prod_inst.send.assert_called_once()
     args, kwargs = mock_prod_inst.send.call_args
     assert kwargs["headers"] == [("h_str", b"str_val"), ("h_bytes", b"bytes_val")]
-
