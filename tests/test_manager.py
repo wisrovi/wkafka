@@ -458,3 +458,10 @@ def test_send_raw_format_and_bytes_headers():
     mock_prod_inst.send.assert_called_once()
     args, kwargs = mock_prod_inst.send.call_args
     assert kwargs["headers"] == [("h_str", b"str_val"), ("h_bytes", b"bytes_val")]
+
+
+def test_wkafka_socks5_proxy_deprecation_normalization():
+    """Validates that passing socks5_proxy converts it to proxy_url to avoid library warnings."""
+    kafka = WKafka(bootstrap_servers="localhost:9092", socks5_proxy="127.0.0.1:1080")
+    assert "socks5_proxy" not in kafka.extra_config
+    assert kafka.extra_config["proxy_url"] == "socks5://127.0.0.1:1080"
