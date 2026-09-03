@@ -63,5 +63,10 @@ class Wkafka(WKafka):
         data_format = value_type or value_convert_to or "json"
         final_headers = headers or header
         return super().send(
-            topic=topic, value=value, key=key, format=data_format, headers=final_headers, **kwargs
+            topic=topic,
+            value=value,
+            key=key,
+            format=data_format,
+            headers=final_headers,
+            **kwargs,
         )
