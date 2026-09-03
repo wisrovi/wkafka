@@ -25,7 +25,9 @@ def receive_image(msg):
     """
     img: np.ndarray = msg.value
     height, width, channels = img.shape
-    print(f"📥 Received Image -> Dimensions: {width}x{height}, Channels: {channels}, dtype: {img.dtype}")
+    print(
+        f"📥 Received Image -> Dimensions: {width}x{height}, Channels: {channels}, dtype: {img.dtype}"
+    )
 
     # Optionally save the received image to disk
     output_filename = f"received_image_{msg.offset}.jpg"
