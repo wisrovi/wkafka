@@ -2,6 +2,7 @@ import os
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from wkafka.core.manager import WKafka
+from wkafka.core.models import Message as Consumer_data
 
 
 class Wkafka(WKafka):
@@ -16,7 +17,7 @@ class Wkafka(WKafka):
         other_config: Optional[dict] = None,
         **kwargs: Any,
     ):
-        bootstrap = os.environ.get("KAFKA_SERVER") or server
+        bootstrap = os.environ.get("KAFKA_SERVER") or server or kwargs.pop("bootstrap_servers", None)
 
         config = other_config or {}
         config.update(kwargs)
@@ -39,11 +40,12 @@ class Wkafka(WKafka):
         other_config: Optional[dict] = None,
         **kwargs: Any,
     ) -> Callable:
-        data_format = value_type or value_convert_to or "json"
+        data_format = value_type or value_convert_to or kwargs.pop("format", None) or "json"
 
         # Fusionar configuraciones
         config = other_config or {}
         config.update(kwargs)
+        config.pop("format", None)
 
         return super().consumer(
             topic=topic, group_id=group_id, key_filter=key, format=data_format, **config
