@@ -201,9 +201,10 @@ class WKafka:
 
             consumer_instance = KafkaConsumer(*topics_args, **config)
 
+            fmt = kafka_kwargs.get("value_type") or kafka_kwargs.get("value_convert_to") or format
             options = {
                 "key_filter": key_filter,
-                "format": format,
+                "format": fmt,
                 "auto_commit": auto_commit,
                 "max_retries": max_retries,
                 "retry_delay": retry_delay,
