@@ -26,6 +26,22 @@ from wkafka.serializers.base import (
 _LOG_CONFIGURED = False
 
 
+def _normalize_proxy_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Converts deprecated socks5_proxy configuration key to proxy_url to prevent kafka library warnings."""
+    if "socks5_proxy" in config:
+        proxy_val = config.pop("socks5_proxy")
+        if "proxy_url" not in config and proxy_val:
+            if isinstance(proxy_val, str) and not (
+                proxy_val.startswith("socks5://")
+                or proxy_val.startswith("http://")
+                or proxy_val.startswith("https://")
+            ):
+                config["proxy_url"] = f"socks5://{proxy_val}"
+            else:
+                config["proxy_url"] = proxy_val
+    return config
+
+
 class WKafka:
     """The main orchestrator for Kafka production and consumption."""
 
@@ -57,7 +73,7 @@ class WKafka:
         self.client_id = client_id or "wkafka-client"
         self.dynamic_group_id = dynamic_group_id
         self.partition_scale = partition_scale
-        self.extra_config = extra_config
+        self.extra_config = _normalize_proxy_config(extra_config)
         self._consumers_registry: List[
             Tuple[KafkaConsumer, Callable, Dict[str, Any]]
         ] = []
@@ -74,6 +90,7 @@ class WKafka:
     ) -> None:
         """Dynamically scales the partition count of a topic to target_count using KafkaAdminClient with retries."""
         from kafka.admin import KafkaAdminClient, NewPartitions, NewTopic
+
         try:
             from kafka.errors import (
                 NoBrokersAvailable,
@@ -192,6 +209,7 @@ class WKafka:
                     ),
                 }
                 producer_config.update(self.extra_config)
+                producer_config = _normalize_proxy_config(producer_config)
 
                 self._producer_instance = KafkaProducer(**producer_config)
             return self._producer_instance
@@ -234,6 +252,8 @@ class WKafka:
             for k, v in self.extra_config.items():
                 if k not in kafka_kwargs:
                     config[k] = v
+
+            config = _normalize_proxy_config(config)
 
             topics_args = []
             if pattern:
