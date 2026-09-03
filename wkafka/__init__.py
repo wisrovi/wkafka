@@ -8,7 +8,7 @@ from wkafka.controller import wkafka
 # Support legacy import: from wkafka.wkafka import Wkafka / import wkafka.wkafka
 sys.modules["wkafka.wkafka"] = wkafka
 
-__version__ = "1.1.6"
+__version__ = "1.1.7"
 __all__ = ["WKafka", "Message", "Wkafka", "wkafka"]
 
 # Alias for backward compatibility if needed, promoting WKafka (CamelCase)
