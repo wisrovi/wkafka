@@ -27,8 +27,7 @@ def run_pipeline():
     """Start consumer in background, then produce sample frames."""
     # Start consumer thread in daemon mode
     consumer_thread = threading.Thread(
-        target=lambda: kafka.run_consumers(block=True),
-        daemon=True
+        target=lambda: kafka.run_consumers(block=True), daemon=True
     )
     consumer_thread.start()
     time.sleep(4)  # Wait for Kafka consumer group rebalance and partition assignment
