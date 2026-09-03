@@ -74,11 +74,16 @@ class WKafka:
     ) -> None:
         """Dynamically scales the partition count of a topic to target_count using KafkaAdminClient with retries."""
         from kafka.admin import KafkaAdminClient, NewPartitions, NewTopic
-        from kafka.errors import (
-            NoBrokersAvailable,
-            NodeNotReadyError,
-            UnknownTopicOrPartitionError,
-        )
+        try:
+            from kafka.errors import (
+                NoBrokersAvailable,
+                NodeNotReadyError,
+                UnknownTopicOrPartitionError,
+            )
+        except ImportError:
+            from kafka.errors import KafkaError as NoBrokersAvailable
+            from kafka.errors import KafkaError as NodeNotReadyError
+            from kafka.errors import KafkaError as UnknownTopicOrPartitionError
 
         admin_config = {
             "bootstrap_servers": self.bootstrap_servers,
@@ -452,7 +457,10 @@ class WKafka:
                 if isinstance(v, bytes):
                     val = v
                 elif isinstance(v, (dict, list)):
-                    val = json.dumps(v, default=lambda o: vars(o) if hasattr(o, "__dict__") else str(o)).encode("utf-8")
+                    val = json.dumps(
+                        v,
+                        default=lambda o: vars(o) if hasattr(o, "__dict__") else str(o),
+                    ).encode("utf-8")
                 else:
                     val = str(v).encode("utf-8")
                 kafka_headers.append((k, val))
