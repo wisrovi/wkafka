@@ -341,7 +341,7 @@ class WKafka:
                     logger.error(f"Failed to route message to DLQ: {dlq_err}")
 
     def run_consumers(
-        self, block: bool = True, partition_scale: Optional[bool] = None
+        self, block: bool = True, partition_scale: Optional[bool] = None, **kwargs: Any
     ) -> None:
         if not self._consumers_registry:
             logger.warning("No consumers registered. Nothing to run.")
