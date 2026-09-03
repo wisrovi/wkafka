@@ -1,3 +1,5 @@
+"""Simplified WKafka controller interface module."""
+
 import os
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -6,6 +8,8 @@ from wkafka.core.models import Message as Consumer_data
 
 
 class Wkafka(WKafka):
+    """High-level Kafka controller providing simplified producer and consumer interfaces."""
+
     def __init__(
         self,
         server: Optional[Union[str, List[str]]] = None,
@@ -17,7 +21,12 @@ class Wkafka(WKafka):
         other_config: Optional[dict] = None,
         **kwargs: Any,
     ):
-        bootstrap = os.environ.get("KAFKA_SERVER") or server or kwargs.pop("bootstrap_servers", None)
+        """Initialize Wkafka instance with environment defaults and options."""
+        bootstrap = (
+            os.environ.get("KAFKA_SERVER")
+            or server
+            or kwargs.pop("bootstrap_servers", None)
+        )
 
         config = other_config or {}
         config.update(kwargs)
@@ -40,7 +49,10 @@ class Wkafka(WKafka):
         other_config: Optional[dict] = None,
         **kwargs: Any,
     ) -> Callable:
-        data_format = value_type or value_convert_to or kwargs.pop("format", None) or "json"
+        """Register a decorator function to consume messages from a topic."""
+        data_format = (
+            value_type or value_convert_to or kwargs.pop("format", None) or "json"
+        )
 
         # Fusionar configuraciones
         config = other_config or {}
@@ -62,7 +74,10 @@ class Wkafka(WKafka):
         header: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        data_format = value_type or value_convert_to or kwargs.pop("format", None) or "json"
+        """Send a message to a Kafka topic."""
+        data_format = (
+            value_type or value_convert_to or kwargs.pop("format", None) or "json"
+        )
         final_headers = headers or header
         return super().send(
             topic=topic,
