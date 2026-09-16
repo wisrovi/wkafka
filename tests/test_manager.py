@@ -465,3 +465,57 @@ def test_wkafka_socks5_proxy_deprecation_normalization():
     kafka = WKafka(bootstrap_servers="localhost:9092", socks5_proxy="127.0.0.1:1080")
     assert "socks5_proxy" not in kafka.extra_config
     assert kafka.extra_config["proxy_url"] == "socks5://127.0.0.1:1080"
+
+
+def test_send_and_receive_complex_json_headers():
+    """
+    Validates automatic JSON serialization in send and automatic JSON deserialization in _handle_message for headers.
+    """
+    kafka = WKafka(bootstrap_servers="localhost:9092")
+    mock_prod_inst = mock.MagicMock()
+    kafka._producer_instance = mock_prod_inst
+
+    # Test send with list and dict headers
+    complex_list = [{"bbox": [10, 20, 30, 40], "class": "car"}]
+    complex_dict = {"status": True, "code": 200}
+    kafka.send(
+        "test_topic",
+        value={"data": "test"},
+        headers={"model_results": complex_list, "status_info": complex_dict},
+    )
+
+    args, kwargs = mock_prod_inst.send.call_args
+    sent_headers = kwargs["headers"]
+    assert len(sent_headers) == 2
+    # Verify sent as valid JSON bytes
+    assert ("model_results", b'[{"bbox": [10, 20, 30, 40], "class": "car"}]') in sent_headers
+    assert ("status_info", b'{"status": true, "code": 200}') in sent_headers
+
+    # Test _handle_message deserializing back to native list/dict
+    mock_msg = mock.MagicMock()
+    mock_msg.value = b'{"data": "test"}'
+    mock_msg.topic = "test_topic"
+    mock_msg.partition = 0
+    mock_msg.offset = 1
+    mock_msg.key = None
+    mock_msg.headers = [
+        ("model_results", b'[{"bbox": [10, 20, 30, 40], "class": "car"}]'),
+        ("status_info", b'{"status": true, "code": 200}'),
+    ]
+
+    mock_consumer = mock.MagicMock()
+    mock_consumer.__iter__.return_value = [mock_msg]
+
+    received_msg = None
+
+    def handler(msg):
+        nonlocal received_msg
+        received_msg = msg
+
+    options = {"format": "json", "auto_commit": True}
+    kafka._handle_message(mock_consumer, handler, options)
+
+    assert received_msg is not None
+    assert received_msg.header["model_results"] == complex_list
+    assert received_msg.header["status_info"] == complex_dict
+
