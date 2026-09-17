@@ -1,0 +1,1 @@
+Stop writing raw Kafka boilerplate in Python. A decorator is enough.

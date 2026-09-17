@@ -1,0 +1,1 @@
+Stop writing the Kafka consumer loop in Python — every single project. One decorator (@kafka.consumer) gives you the loop, serialization & clean shutdown. WKafka: open-source, MIT, Python 3.9→3.14, 14 runnable examples. https://github.com/wisrovi/wkafka #Kafka #Python

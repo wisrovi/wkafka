@@ -1,0 +1,1 @@
+Deja de escribir el loop del consumer de Kafka a mano en cada proyecto. Un decorador (@kafka.consumer) te da el loop, la serialización y el apagado limpio. WKafka: open source, MIT, Python 3.9→3.14, 14 ejemplos reproducibles. https://github.com/wisrovi/wkafka #Kafka #Python

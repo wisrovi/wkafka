@@ -1,0 +1,1 @@
+Deja de escribir el boilerplate de Kafka en Python a mano. Un decorador es suficiente.
