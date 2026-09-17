@@ -1,0 +1,1 @@
+El orden en Kafka es un contrato que hay que ganar — claves y headers, una línea cada uno.

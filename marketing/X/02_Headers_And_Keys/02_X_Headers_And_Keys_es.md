@@ -1,0 +1,1 @@
+Kafka no ordena "de gratis". Te da orden **por partición** — y solo si enrutas con clave. Keys = orden por entidad; headers = contexto buscable sin tocar el esquema. Ambos en una línea en WKafka. https://github.com/wisrovi/wkafka #Kafka #Python #Wisrovi

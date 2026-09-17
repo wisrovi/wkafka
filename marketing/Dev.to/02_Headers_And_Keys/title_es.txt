@@ -1,0 +1,1 @@
+Kafka solo garantiza orden si lo ganas. La ruta en dos líneas.

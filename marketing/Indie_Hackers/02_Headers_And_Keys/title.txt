@@ -1,0 +1,1 @@
+Kafka ordering is a contract you must earn — keys & headers, one line each.

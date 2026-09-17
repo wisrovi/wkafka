@@ -1,0 +1,1 @@
+El orden en Kafka se gana, no se regala: misma clave → misma partición → orden. Una línea.

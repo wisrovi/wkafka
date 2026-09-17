@@ -1,0 +1,1 @@
+Kafka only guarantees order if you earn it — keys and headers are the currency.

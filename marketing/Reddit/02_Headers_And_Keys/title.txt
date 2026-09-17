@@ -1,0 +1,1 @@
+Kafka ordering is a contract you earn: per-partition order + keys + headers.

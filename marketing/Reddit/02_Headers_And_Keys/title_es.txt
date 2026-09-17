@@ -1,0 +1,1 @@
+El orden en Kafka se gana: orden por partición + claves + headers.

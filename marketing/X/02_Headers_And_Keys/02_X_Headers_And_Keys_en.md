@@ -1,0 +1,1 @@
+Kafka doesn't order "for free". It gives you order **per partition** — only if you route with a key. Keys = per-entity order; headers = searchable context without touching the schema. Both in one line in WKafka. https://github.com/wisrovi/wkafka #Kafka #Python #Wisrovi

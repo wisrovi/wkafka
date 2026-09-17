@@ -1,0 +1,1 @@
+Kafka ordering is earned, not given: same key → same partition → order. One line.

@@ -1,0 +1,1 @@
+The 'ordered queue' myth, and the two Kafka primitives that make it real.
