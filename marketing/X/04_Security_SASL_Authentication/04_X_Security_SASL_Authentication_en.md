@@ -1,0 +1,1 @@
+SASL/SCRAM is transport, not handler logic. Same decorator, same Day-01 contract, credentials from env — one typed declaration. WKafka Day 04: https://github.com/wisrovi/wkafka #Kafka #SASL #Python #Wisrovi

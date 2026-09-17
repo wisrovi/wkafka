@@ -1,0 +1,1 @@
+Kafka doesn't authenticate by accident. It's a typed, one-time contract — Day 04.

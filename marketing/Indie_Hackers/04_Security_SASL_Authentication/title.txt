@@ -1,0 +1,1 @@
+One typed WKafka object authenticates your whole pipeline. Not one leaked password later.

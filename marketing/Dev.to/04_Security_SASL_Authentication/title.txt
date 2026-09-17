@@ -1,0 +1,1 @@
+The 'just-an-internal-detail' Kafka port costs whole services. SASL as a typed one-time contract.

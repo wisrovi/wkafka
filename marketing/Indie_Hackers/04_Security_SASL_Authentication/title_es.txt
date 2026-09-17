@@ -1,0 +1,1 @@
+Un objeto WKafka tipado autentica todo tu pipeline. Ni una contraseña filtrada después.

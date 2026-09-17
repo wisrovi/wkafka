@@ -1,0 +1,1 @@
+SASL is transport, not handler logic.

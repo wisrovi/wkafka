@@ -1,0 +1,1 @@
+Ese puerto Kafka 'interno' cuesta servicios enteros. SASL como contrato tipado de una sola vez.

@@ -1,0 +1,1 @@
+[P] Open source SASL round-trip on WKafka: typed auth, zero copy-paste — MIT, reproducible (Day 04).
