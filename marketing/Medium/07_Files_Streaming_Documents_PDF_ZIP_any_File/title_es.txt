@@ -1,0 +1,1 @@
+WKafka Día 07 — files: tu contrato está hecho cuando los bytes aterrizan intactos; los headers llevan nombre+MIME (Días 02/04 intactos). MIT · reproducible

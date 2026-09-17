@@ -1,0 +1,1 @@
+WKafka Day 07 — files: your contract is done when the bytes land intact, headers carry name+mime (Day 02/04 still riding). MIT · reproducible
