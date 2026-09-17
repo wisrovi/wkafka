@@ -1,0 +1,1 @@
+We streamed images over Kafka instead of bytes — here's the two-line afterline.

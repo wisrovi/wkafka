@@ -1,0 +1,1 @@
+¿Cómo envías un frame (no un byte) por Kafka? Lo convertimos en un flag de formato.

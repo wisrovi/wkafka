@@ -1,0 +1,1 @@
+Kafka no tiene opinión sobre tus frames. Ese es el punto: `format="image"` los vuelve mensajes de primera clase — mismo decorador, mismo orden por clave, mismo apagado. Streaming de imágenes (OpenCV/NumPy/PIL), MIT. https://github.com/wisrovi/wkafka #Kafka #OpenCV #Python #Wisrovi

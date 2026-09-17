@@ -1,0 +1,1 @@
+Stop treating images as 'raw bytes' in Kafka. They deserve a serialization contract.

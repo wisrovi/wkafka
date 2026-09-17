@@ -1,0 +1,1 @@
+Streaming de imágenes por Kafka en vez de bytes — la conclusión en dos líneas.

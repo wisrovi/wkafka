@@ -1,0 +1,1 @@
+In Kafka, an image is a first-class message — not a blob to reverse-engineer.

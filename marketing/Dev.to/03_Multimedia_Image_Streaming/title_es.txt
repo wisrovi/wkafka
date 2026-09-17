@@ -1,0 +1,1 @@
+Deja de tratar las imágenes como bytes

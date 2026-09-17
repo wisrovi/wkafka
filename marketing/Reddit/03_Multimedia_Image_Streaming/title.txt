@@ -1,0 +1,1 @@
+How do you send a frame (not a byte) over Kafka? We made it a format flag.

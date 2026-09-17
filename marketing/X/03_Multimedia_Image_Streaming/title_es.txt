@@ -1,0 +1,1 @@
+Las imágenes son ciudadanos de primera clase en Kafka: mismo decorador, mismo format.

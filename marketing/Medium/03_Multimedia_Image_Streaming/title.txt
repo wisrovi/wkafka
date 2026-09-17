@@ -1,0 +1,1 @@
+Kafka has no opinion about your image. That's the point.
