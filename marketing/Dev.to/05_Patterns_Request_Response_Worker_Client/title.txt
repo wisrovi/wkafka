@@ -1,0 +1,1 @@
+Over a worker ↔ client RPC on Kafka, typing is the handshake you actually trust. Weekly dev flog the snippet instead.

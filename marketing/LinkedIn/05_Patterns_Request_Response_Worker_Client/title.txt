@@ -1,0 +1,1 @@
+Kafka RPC done right, one decorator. Not a weekend of correlation tables.

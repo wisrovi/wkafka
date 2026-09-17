@@ -1,0 +1,1 @@
+Sobre un RPC worker ↔ client en Kafka, el tipado es el handshake que de verdad confías. La mayoría copia el snippet.

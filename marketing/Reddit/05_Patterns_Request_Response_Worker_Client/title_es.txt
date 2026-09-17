@@ -1,0 +1,1 @@
+RPC sobre Kafka bien tipado, un decorador. No un fin de semana de tablas de correlación.
