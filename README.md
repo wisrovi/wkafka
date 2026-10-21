@@ -25,6 +25,8 @@ WKafka simplifies Apache Kafka integration by providing a high-level, intuitive 
 - **Multimedia & File Native**: Seamlessly send and receive images (OpenCV/NumPy/PIL) and arbitrary files (PDF, ZIP, TXT) via `format="file"`.
 - **Type-safe Pydantic Validation**: Automatic schema validation with `format="pydantic"`.
 - **Manual Offset Commit**: Control At-Least-Once delivery semantics with `auto_commit=False` and `msg.commit()`.
+- **Immediate Commit on Receive**: Built-in support for At-Most-Once / early acknowledgment with `commit_on_receive=True`.
+- **Decoupled Background Execution**: Non-blocking background worker dispatch with `background=True` and `background_workers=N` to prevent Kafka heartbeat timeouts during long-running tasks.
 - **Partition Auto-scaling & Retries**: Automatic topic partition scaling with `describe_topics` inspection and exponential backoff retry resilience against transient `NodeNotReadyError`.
 - **Async/Await Support**: Define non-blocking `async def` consumer handlers.
 - **Professional Ops**: Structured logging via `loguru` and multi-version testing with `tox`.
@@ -92,6 +94,29 @@ def handle_event(msg):
     process_payload(msg.value)
 ```
 
+### Immediate Commit on Receive (Early Acknowledgment)
+```python
+@kafka.consumer(topic="events", format="json", commit_on_receive=True)
+def handle_early_ack(msg):
+    # Offset is committed immediately upon receipt before entering this function
+    process_quick_event(msg.value)
+```
+
+### Long-Running Tasks & Decoupled Background Workers
+```python
+# Perfect for ML inference, video processing, or PDF generation that takes hours
+@kafka.consumer(
+    topic="reports.generate",
+    format="json",
+    commit_on_receive=True,  # Commit offset immediately upon receipt
+    background=True,         # Offload execution to a background ThreadPool
+    background_workers=4,    # Up to 4 parallel background workers
+)
+def handle_long_task(msg):
+    # Runs in a separate thread. Kafka consumer loop never blocks and never triggers max_poll_interval_ms rebalances!
+    generate_heavy_report_and_pdf(msg.value)
+```
+
 ---
 
 ## 📂 Project Structure
@@ -100,14 +125,14 @@ def handle_event(msg):
 - `wkafka.serializers`: Extensible serialization system (`JSONSerializer`, `YAMLSerializer`, `ImageSerializer`, `PydanticSerializer`, `FileSerializer`).
 - `wkafka.controller`: Backward compatibility layer for legacy code.
 - `examples/`: 12 complete, production-ready example modules (`01_basic` through `12_pydantic_validation`).
-- `enviroment/`: Production-ready Docker setups (KRaft, SASL).
+- `environment/`: Production-ready Docker setups (KRaft, SASL).
 
 ---
 
 ## 🛠️ Tecnologías y Librerías Relevantes
 
 - **Python (3.9 - 3.14)**: Lenguaje principal de desarrollo y ejecución.
-- **kafka-python-ng / kafka-python**: Cliente subyacente para comunicación de bajo nivel con Apache Kafka.
+- **kafka-python-ng / kafka-python**: Client library for low-level communication with Apache Kafka.
 - **OpenCV (`opencv-python`) & Pillow**: Procesamiento, renderizado, serialización y deserialización de imágenes.
 - **Pydantic**: Validación de esquemas y modelos de datos tipados (`format="pydantic"`).
 - **NumPy**: Manejo de estructuras de datos matriciales multidimensionales para imágenes.
