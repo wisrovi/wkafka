@@ -22,6 +22,7 @@ Esta suite está diseñada para que domines **WKafka v1.0.0 LTS** paso a paso, d
 | `12_pydantic_validation` | 🛡️ Validación | Validación tipada de modelos Pydantic con `format="pydantic"`. |
 | `13_partition_scale` | 🚀 Escalabilidad | Auto-escalado dinámico de particiones por tópico (`partition_scale=True`) para paralelismo real. |
 | `14_interactive_producer` | 🎮 Herramientas | Consola interactiva CLI para escribir y publicar mensajes en tiempo real. |
+| `15_long_running_background_tasks` | ⚡ Cómputo Pesado | Workers desacoplados (`background=True`) y confirmación inmediata (`commit_on_receive=True`) para evitar timeouts de Kafka. |
 
 ---
 
