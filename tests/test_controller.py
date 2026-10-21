@@ -1,5 +1,4 @@
-"""
-Unit tests for legacy Wkafka Controller Bridge.
+"""Unit tests for legacy Wkafka Controller Bridge.
 
 This module tests initialization, consumer decorator parameters,
 and send method of the legacy Wkafka class.
@@ -10,8 +9,8 @@ from wkafka.controller.wkafka import Wkafka
 
 
 def test_legacy_wkafka_init():
-    """
-    Validates legacy Wkafka controller initialization.
+    """Validates legacy Wkafka controller initialization.
+
     Verifies server alias mapping to bootstrap_servers and name to client_id.
     """
     client = Wkafka(server="localhost:9092", name="legacy_app", partition_scale=True)
@@ -22,8 +21,8 @@ def test_legacy_wkafka_init():
 
 @mock.patch("wkafka.core.manager.KafkaConsumer")
 def test_legacy_wkafka_consumer_and_send(mock_kafka_consumer):
-    """
-    Validates legacy Wkafka consumer registration and send method.
+    """Validates legacy Wkafka consumer registration and send method.
+
     Verifies parameter mapping (value_type -> format, key -> key_filter, header -> headers).
     """
     client = Wkafka(server="localhost:9092")
@@ -49,8 +48,8 @@ def test_legacy_wkafka_consumer_and_send(mock_kafka_consumer):
 
 
 def test_legacy_module_import_structure():
-    """
-    Validates legacy import structure compatibility (wkafka.wkafka).
+    """Validates legacy import structure compatibility (wkafka.wkafka).
+
     Ensures code expecting wkafka.wkafka (or from wkafka.wkafka import Wkafka) works.
     """
     import wkafka
@@ -58,3 +57,30 @@ def test_legacy_module_import_structure():
     assert hasattr(wkafka, "wkafka")
     assert hasattr(wkafka.wkafka, "Wkafka")
     assert hasattr(wkafka.wkafka, "WKafka")
+
+
+@mock.patch("wkafka.core.manager.KafkaConsumer")
+def test_legacy_wkafka_consumer_with_commit_on_receive_and_background(
+    mock_kafka_consumer,
+):
+    """Validates legacy Wkafka controller passing commit_on_receive and background parameters.
+
+    Ensures that legacy Wkafka consumers can utilize commit_on_receive, background,
+    and background_workers options seamlessly.
+    """
+    client = Wkafka(server="localhost:9092")
+
+    @client.consumer(
+        topic="legacy_heavy_topic",
+        commit_on_receive=True,
+        background=True,
+        background_workers=3,
+    )
+    def legacy_heavy_handler(msg):
+        pass
+
+    assert len(client._consumers_registry) == 1
+    _, _, options = client._consumers_registry[0]
+    assert options["commit_on_receive"] is True
+    assert options["background"] is True
+    assert options["background_workers"] == 3
