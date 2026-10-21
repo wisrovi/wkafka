@@ -9,7 +9,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License" /></a>
 </p>
 
-# WKafka v1.0.0 LTS 🚀
+# WKafka 🚀
 
 **Professional, Decorator-based Kafka Wrapper for Python.**
 
@@ -102,20 +102,69 @@ def handle_early_ack(msg):
     process_quick_event(msg.value)
 ```
 
-### Long-Running Tasks & Decoupled Background Workers
+### Long-Running Tasks & Decoupled Background Workers (The ML & Video Dilemma)
+
+In Apache Kafka, if a consumer handler takes longer than `max_poll_interval_ms` (default: 5 minutes) to return:
+1. The Kafka broker assumes the consumer has crashed or deadlocked.
+2. The broker evicts the consumer from the consumer group (**Consumer Group Rebalance**).
+3. The message offset is never committed, and another consumer (or the restarted consumer) picks up the same message in an **infinite duplicate loop**.
+
+**WKafka provides two native solutions that can be used independently or combined:**
+
+* **`commit_on_receive=True`**: Forces an immediate offset commit to the Kafka broker as soon as the message is dequeued, before entering your handler function. This ensures that the message is acknowledged and will not be re-delivered if processing is interrupted.
+* **`background=True`**: Dispatches the execution of your callback to an internal `ThreadPoolExecutor`. The main Kafka polling thread returns immediately to its `poll()` loop, continually answering broker heartbeats. Your heavy processing function can run for minutes or hours without ever triggering a timeout or rebalance!
+* **`background_workers=N`**: Controls the maximum number of concurrent tasks executed in parallel.
+
 ```python
+from wkafka import WKafka
+
+kafka = WKafka(bootstrap_servers="localhost:9092")
+
 # Perfect for ML inference, video processing, or PDF generation that takes hours
 @kafka.consumer(
     topic="reports.generate",
     format="json",
-    commit_on_receive=True,  # Commit offset immediately upon receipt
-    background=True,         # Offload execution to a background ThreadPool
-    background_workers=4,    # Up to 4 parallel background workers
+    commit_on_receive=True,  # 1. Commit offset immediately upon receipt
+    background=True,         # 2. Offload execution to a background worker pool
+    background_workers=4,    # 3. Allow up to 4 parallel heavy tasks
 )
 def handle_long_task(msg):
-    # Runs in a separate thread. Kafka consumer loop never blocks and never triggers max_poll_interval_ms rebalances!
+    # Runs in a separate thread.
+    # The Kafka consumer loop never blocks and never triggers max_poll_interval_ms rebalances!
     generate_heavy_report_and_pdf(msg.value)
 ```
+
+#### Architecture Flow:
+```
+Kafka Topic ────────► Consumer Thread (poll)
+                            │
+                            ├─► commit_on_receive=True ──► [Commit Offset to Broker Immediately]
+                            │
+                            └─► background=True ─────────► [ThreadPoolExecutor Worker 1] ──► Long Task (Hours)
+                                                         ├─► [ThreadPoolExecutor Worker 2] ──► Long Task (Hours)
+                                                         └─► Consumer Thread Continues Polling (Heartbeats Active!)
+```
+
+---
+
+## 📋 Consumer Configuration Reference (`@kafka.consumer`)
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `topic` | `str \| List[str]` | `None` | Topic or list of topics to subscribe to. |
+| `pattern` | `str` | `None` | Regex pattern for dynamic multi-topic matching. |
+| `group_id` | `str` | Auto-generated | Consumer group identifier. |
+| `format` | `str` | `"json"` | Deserializer format (`"json"`, `"yaml"`, `"image"`, `"file"`, `"pydantic"`). |
+| `auto_commit` | `bool` | `True` | Enables periodic automatic background offset commits by Kafka. |
+| `commit_on_receive` | `bool` | `False` | Immediately commits the offset upon receipt before executing the handler. |
+| `background` | `bool` | `False` | Executes handler in a background worker thread to keep the consumer poll loop active. |
+| `background_workers` | `int` | `1` | Maximum parallel worker threads when `background=True`. |
+| `max_retries` | `int` | `0` | Number of retry attempts on exception before routing to DLQ. |
+| `retry_delay` | `float` | `1.0` | Initial exponential backoff delay in seconds between retries. |
+| `dlq_topic` | `str` | `None` | Dead Letter Queue topic to route permanently failed messages. |
+| `model` | `BaseModel` | `None` | Pydantic model class for automatic typed validation when `format="pydantic"`. |
+| `key_filter` | `str` | `None` | Only processes messages matching this specific partition key. |
+| `partition_scale` | `bool` | `None` | Enables dynamic partition scaling via KafkaAdminClient for true parallel workers. |
 
 ---
 
@@ -124,7 +173,7 @@ def handle_long_task(msg):
 - `wkafka.core`: Orchestration and base logic (`WKafka`, `Message`).
 - `wkafka.serializers`: Extensible serialization system (`JSONSerializer`, `YAMLSerializer`, `ImageSerializer`, `PydanticSerializer`, `FileSerializer`).
 - `wkafka.controller`: Backward compatibility layer for legacy code.
-- `examples/`: 12 complete, production-ready example modules (`01_basic` through `12_pydantic_validation`).
+- `examples/`: 15 complete, production-ready example modules (`01_basic` through `15_long_running_background_tasks`).
 - `environment/`: Production-ready Docker setups (KRaft, SASL).
 
 ---
@@ -163,11 +212,11 @@ El script genera un informe de cobertura HTML (`htmlcov/index.html`) garantizand
 
 ---
 
-## 👤 Autor & Afiliación Oficial
+## 👤 Author & Affiliation
 
 * **William Steve Rodriguez Villamizar (Wisrovi)**
 * **Cargo:** Principal AI Engineer & Applied AI Solutions Architect | Scientific Researcher
-* 🌐 **Portal Oficial:** [wisrovi.dev](https://wisrovi.dev)
+* 🌐 **Official Website:** [wisrovi.dev](https://wisrovi.dev)
 * 💼 **LinkedIn:** [wisrovi-rodriguez](https://www.linkedin.com/in/wisrovi-rodriguez/)
 * 🆔 **ORCID:** [0009-0005-0710-1861](https://orcid.org/0009-0005-0710-1861)
 * 📦 **PyPI:** [pypi.org/user/wisrovi/](https://pypi.org/user/wisrovi/)
