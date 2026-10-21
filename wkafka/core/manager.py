@@ -223,6 +223,9 @@ class WKafka:
         key_filter: Optional[str] = None,
         format: str = "json",
         auto_commit: bool = True,
+        commit_on_receive: bool = False,
+        background: bool = False,
+        background_workers: int = 1,
         max_retries: int = 0,
         retry_delay: float = 1.0,
         dlq_topic: Optional[str] = None,
@@ -235,11 +238,12 @@ class WKafka:
         def decorator(func: Callable) -> Callable:
             final_group_id = group_id or self._generate_group_id()
 
+            effective_auto_commit = False if commit_on_receive else auto_commit
             config = {
                 "bootstrap_servers": self.bootstrap_servers,
                 "group_id": final_group_id,
                 "auto_offset_reset": "latest",
-                "enable_auto_commit": auto_commit,
+                "enable_auto_commit": effective_auto_commit,
             }
             config.update(kafka_kwargs)
 
@@ -275,6 +279,9 @@ class WKafka:
                 "key_filter": key_filter,
                 "format": fmt,
                 "auto_commit": auto_commit,
+                "commit_on_receive": commit_on_receive,
+                "background": background,
+                "background_workers": background_workers,
                 "max_retries": max_retries,
                 "retry_delay": retry_delay,
                 "dlq_topic": dlq_topic,
@@ -314,69 +321,23 @@ class WKafka:
         key_filter = options.get("key_filter")
         data_format = options.get("format", "json")
         auto_commit = options.get("auto_commit", True)
+        commit_on_receive = options.get("commit_on_receive", False)
+        background = options.get("background", False)
+        background_workers = options.get("background_workers", 1)
         max_retries = options.get("max_retries", 0)
         retry_delay = options.get("retry_delay", 1.0)
         dlq_topic = options.get("dlq_topic")
         model = options.get("model")
 
-        for raw_msg in consumer:
-            if key_filter and raw_msg.key != key_filter:
-                continue
-
-            headers = {}
-            if raw_msg.headers:
-                for k, v in raw_msg.headers:
-                    k_str = k.decode("utf-8") if isinstance(k, bytes) else str(k)
-                    try:
-                        val_str = v.decode("utf-8") if isinstance(v, bytes) else str(v)
-                        if k_str == "metadata":
-                            try:
-                                meta_dict = json.loads(val_str)
-                                if isinstance(meta_dict, dict):
-                                    headers.update(meta_dict)
-                            except Exception:
-                                headers[k_str] = val_str
-                        else:
-                            try:
-                                parsed_json = json.loads(val_str)
-                                headers[k_str] = parsed_json
-                            except Exception:
-                                headers[k_str] = val_str
-                    except Exception:
-                        headers[k_str] = v
-
-            value = raw_msg.value
-            if data_format in self._SERIALIZERS:
-                try:
-                    kwargs = {}
-                    if model:
-                        kwargs["model"] = model
-                    value = self._SERIALIZERS[data_format].deserialize(value, **kwargs)
-                except Exception as e:
-                    logger.error(f"Failed to deserialize message in {data_format}: {e}")
-
-            commit_callback = (lambda: consumer.commit()) if not auto_commit else None
-
-            config_obj = getattr(consumer, "config", None)
-            group_id = (
-                config_obj.get("group_id", "wkafka-group")
-                if isinstance(config_obj, dict)
-                else "wkafka-group"
-            )
-            msg_obj = Message(
-                value=value,
-                topic=raw_msg.topic,
-                group_id=group_id,
-                offset=raw_msg.offset,
-                key=(
-                    raw_msg.key.decode("utf-8")
-                    if raw_msg.key and isinstance(raw_msg.key, bytes)
-                    else raw_msg.key
-                ),
-                headers=headers,
-                _commit_fn=commit_callback,
+        executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+        if background:
+            workers_count = max(1, int(background_workers))
+            executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=workers_count,
+                thread_name_prefix=f"wkafka-bg-{data_format}",
             )
 
+        def _process_message(msg_obj: Message) -> Optional[Dict[str, Any]]:
             success = False
             last_exception = None
 
@@ -385,7 +346,7 @@ class WKafka:
                     result = self._execute_callback(func, msg_obj)
                     success = True
                     if isinstance(result, dict) and result.get("exit"):
-                        return
+                        return result
                     break
                 except Exception as e:
                     last_exception = e
@@ -414,6 +375,97 @@ class WKafka:
                         )
                 except Exception as dlq_err:
                     logger.error(f"Failed to route message to DLQ: {dlq_err}")
+            return None
+
+        try:
+            for raw_msg in consumer:
+                if key_filter and raw_msg.key != key_filter:
+                    continue
+
+                headers = {}
+                if raw_msg.headers:
+                    for k, v in raw_msg.headers:
+                        k_str = k.decode("utf-8") if isinstance(k, bytes) else str(k)
+                        try:
+                            val_str = (
+                                v.decode("utf-8") if isinstance(v, bytes) else str(v)
+                            )
+                            if k_str == "metadata":
+                                try:
+                                    meta_dict = json.loads(val_str)
+                                    if isinstance(meta_dict, dict):
+                                        headers.update(meta_dict)
+                                except Exception:
+                                    headers[k_str] = val_str
+                            else:
+                                try:
+                                    parsed_json = json.loads(val_str)
+                                    headers[k_str] = parsed_json
+                                except Exception:
+                                    headers[k_str] = val_str
+                        except Exception:
+                            headers[k_str] = v
+
+                value = raw_msg.value
+                if data_format in self._SERIALIZERS:
+                    try:
+                        kwargs = {}
+                        if model:
+                            kwargs["model"] = model
+                        value = self._SERIALIZERS[data_format].deserialize(
+                            value, **kwargs
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to deserialize message in {data_format}: {e}"
+                        )
+
+                commit_callback = (
+                    (lambda: consumer.commit())
+                    if (not auto_commit or commit_on_receive)
+                    else None
+                )
+
+                config_obj = getattr(consumer, "config", None)
+                group_id = (
+                    config_obj.get("group_id", "wkafka-group")
+                    if isinstance(config_obj, dict)
+                    else "wkafka-group"
+                )
+                msg_obj = Message(
+                    value=value,
+                    topic=raw_msg.topic,
+                    group_id=group_id,
+                    offset=raw_msg.offset,
+                    key=(
+                        raw_msg.key.decode("utf-8")
+                        if raw_msg.key and isinstance(raw_msg.key, bytes)
+                        else raw_msg.key
+                    ),
+                    headers=headers,
+                    _commit_fn=commit_callback,
+                )
+
+                if commit_on_receive:
+                    try:
+                        consumer.commit()
+                        logger.debug(
+                            f"Offset {raw_msg.offset} committed immediately on receive for topic {raw_msg.topic}"
+                        )
+                    except Exception as commit_err:
+                        logger.warning(
+                            f"Failed to commit offset {raw_msg.offset} on receive: {commit_err}"
+                        )
+
+                if background and executor is not None:
+                    executor.submit(_process_message, msg_obj)
+                else:
+                    res = _process_message(msg_obj)
+                    if isinstance(res, dict) and res.get("exit"):
+                        return
+        finally:
+            if executor is not None:
+                executor.shutdown(wait=True)
 
     def run_consumers(
         self, block: bool = True, partition_scale: Optional[bool] = None, **kwargs: Any
