@@ -12,8 +12,8 @@ Todas las pruebas se realizaron sin mocks ni respuestas simuladas en código.
 | :-: | :--- | :--- | :-: | :-: | :-: | :--- |
 | **01** | `01_basic` | Mensajería JSON básica | ✅ OK | ✅ OK | 🟢 PASS | Payload `{"hello": "world", "status": "online"}` serializado y consumido correctamente. |
 | **02** | `02_advanced` | Routing Keys y Headers | ✅ OK | ✅ OK | 🟢 PASS | Key `system_monitor` y Headers `{"priority": "high", "origin": "node-01"}` recibidos intactos. |
-| **03** | `03_multimedia` | Stream continuo de imágenes | ✅ OK | ✅ OK | 🟢 PASS | Transmisión de fotograma OpenCV en tiempo real; recibido con dimensiones `(480, 640, 3)`. |
-| **04** | `04_security_sasl` | Autenticación SASL PLAIN | ⚠️ N/A | ⚠️ N/A | 🟡 CONFIG | Código de conexión SASL validado contra especificación (requiere clúster SASL en `localhost:30092`). |
+| **03** | `03_multimedia` | Stream continuo de imágenes | ✅ OK | ✅ OK | 🟢 PASS | Transmisión de fotograma OpenCV en tiempo real; recibido con dimensions `(480, 640, 3)`. |
+| **04** | `04_security_sasl` | Autenticación SASL PLAIN | ⚠️ N/A | ⚠️ N/A | 🟡 CONFIG | Código de conexión SASL validado contra especificación (requires clúster SASL en `localhost:30092`). |
 | **05** | `05_patterns` | Microservicios Worker / Client | ✅ OK | ✅ OK | 🟢 PASS | Flujo bidireccional completo: `tasks` -> `worker` -> `results` -> `client` (`{'id': 101, 'done': True}`). |
 | **06** | `06_images` | Img PIL & OpenCV (`format="image"`) | ✅ OK | ✅ OK | 🟢 PASS | Matriz de píxeles BGR recibida y decodificada exitosamente en consumidor (`(360, 640, 3)`). |
 | **07** | `07_files` | Archivos binarios (`format="file"`) | ✅ OK | ✅ OK | 🟢 PASS | Archivos `document_1.txt` y `document_2.txt` guardados físicamente en `received_pipeline_files/`. |
@@ -24,6 +24,7 @@ Todas las pruebas se realizaron sin mocks ni respuestas simuladas en código.
 | **12** | `12_pydantic_validation` | Esquemas Pydantic (`format="pydantic"`) | ✅ OK | ✅ OK | 🟢 PASS | Instancia de `UserModel` (`id=101`, `username="alice"`) validada y deserializada automáticamente. |
 | **13** | `13_partition_scale` | Auto-escalado de particiones | ✅ OK | ✅ OK | 🟢 PASS | Tópico `partition_scaled_topic` auto-escalado dinámicamente de 1 a 2 particiones en KafkaAdminClient. |
 | **14** | `14_interactive_producer` | Consola interactiva CLI | ✅ OK | ✅ OK | 🟢 PASS | Interfaz CLI interactiva `input()` transmitió mensajes dinámicos consumidos en tiempo real. |
+| **15** | `15_long_running_background_tasks` | Workers en segundo plano y commit temprano | ✅ OK | ✅ OK | 🟢 PASS | Procesamiento desacoplado con `commit_on_receive=True` y `background=True` evitando rebalanceos por timeout. |
 
 ---
 
@@ -31,7 +32,7 @@ Todas las pruebas se realizaron sin mocks ni respuestas simuladas en código.
 
 - **Python (3.9 - 3.14)**: Lenguaje y entorno de desarrollo.
 - **Apache Kafka Broker**: Servidor de eventos distribuido en tiempo real (Broker ejecutable en `localhost:29092`).
-- **`kafka-python-ng`**: Cliente base de protocolo Apache Kafka con soporte para `KafkaAdminClient` y `NewPartitions`.
+- **`kafka-python-ng`**: Client base de protocolo Apache Kafka con soporte para `KafkaAdminClient` y `NewPartitions`.
 - **OpenCV (`opencv-python`) & Pillow (PIL)**: Renderizado, matriz de píxeles, codificación JPEG y deserialización multimedia.
 - **Pydantic**: Validación y tipado de modelos estructurados.
 - **Loguru**: Trazabilidad y logs estructurados de eventos en consola y archivos de registro.
