@@ -46,6 +46,9 @@ class Wkafka(WKafka):
         key: Optional[str] = None,
         value_type: Optional[str] = None,
         value_convert_to: Optional[str] = None,
+        commit_on_receive: bool = False,
+        background: bool = False,
+        background_workers: int = 1,
         other_config: Optional[dict] = None,
         **kwargs: Any,
     ) -> Callable:
@@ -60,7 +63,14 @@ class Wkafka(WKafka):
         config.pop("format", None)
 
         return super().consumer(
-            topic=topic, group_id=group_id, key_filter=key, format=data_format, **config
+            topic=topic,
+            group_id=group_id,
+            key_filter=key,
+            format=data_format,
+            commit_on_receive=commit_on_receive,
+            background=background,
+            background_workers=background_workers,
+            **config,
         )
 
     def send(
