@@ -29,6 +29,7 @@ Raw Kafka clients require dozens of lines of repetitive boilerplate: manually se
 * ⚡ **Decoupled Heavy Computation**: Prevent Kafka's infamous `CommitFailedError` / `max_poll_interval_ms` rebalance loops during hours-long ML tasks via `background=True` and `commit_on_receive=True`.
 * 🛡️ **Built-in Resilience**: Automatic retries with exponential backoff and automated Dead Letter Queue (DLQ) routing with diagnostic error headers.
 * 🚀 **Dynamic Partition Auto-Scaling**: Automatically detect consumer concurrency and scale topic partitions on the broker via `KafkaAdminClient` (`partition_scale=True`).
+* ⚡ **High-Throughput Payload Offloading**: Stream high-FPS computer vision matrices or heavy files directly in Redis RAM with automated TTL via `wredis` while Kafka routes ultra-lightweight Claim-Check references (~120 bytes).
 * 🔒 **Enterprise Security**: Native support for SASL (PLAIN, SCRAM-SHA-256, SCRAM-SHA-512), SSL/TLS, and SOCKS5 proxies.
 * ⚡ **Async/Await Ready**: Native execution of asynchronous coroutine handlers (`async def`).
 
@@ -43,8 +44,14 @@ pip install wkafka
 # Via poetry
 poetry add wkafka
 
+# With high-speed Redis payload offload support
+pip install "wkafka[redis]"
+
 # High-performance snappy compression support
 pip install "wkafka[snappy]"
+
+# All optional enterprise features
+pip install "wkafka[all]"
 ```
 
 ---
@@ -360,6 +367,138 @@ kafka = WKafka(bootstrap_servers="localhost:9092", partition_scale=True)
 
 ---
 
+## 🚀 High-Throughput RAM Payload Offloading (Claim-Check Pattern with WRedis)
+
+### The Vision & Large-File Bottleneck
+Streaming high-frequency multimedia (e.g. 30 FPS at 1080p OpenCV matrices) or multi-megabyte binary documents directly through Apache Kafka brokers leads to severe problems:
+1. **Broker Memory & Disk Saturation:** Heavy messages bloat the JVM heap, trigger garbage collection stalls, and monopolize disk pagecaches.
+2. **Commit Latency & Rebalances:** Transporting heavy binaries slows down consumer polling and offset commits.
+3. **Stale Frames Accumulation:** If a downstream consumer lags during deep learning inference (e.g., YOLO or segmentation), Kafka queues up gigabytes of outdated frames instead of maintaining real-time video state.
+
+### The Solution: Transparent Claim-Check via WRedis
+WKafka natively implements the **Claim-Check Pattern** powered by `WRedis`:
+1. **Producer Side:** Heavy payloads (e.g. `format="image"` or `format="file"`) are compressed and written directly to Redis in RAM with a short Time-To-Live (TTL = 5 seconds).
+2. **Kafka Broker:** Transfers only an ultra-lightweight JSON Claim-Check pointer (~120 bytes) containing headers and routing keys.
+3. **Consumer Side:** Intercepts the Claim-Check reference, retrieves the binary payload directly from Redis RAM, and decodes it back to the original object (`numpy.ndarray` for images) transparently.
+4. **Drop-on-Expired Policy:** If a consumer lags beyond the TTL (5s), stale frames evaporate from RAM and are skipped automatically without crashing (`on_expired="drop"`), keeping your pipeline strictly real-time!
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor P as Producer (Camera Extractor)
+    participant WK as WKafka Engine
+    participant R as Redis RAM (WRedis)
+    participant K as Kafka Broker
+    actor C as Consumer (Vision AI / YOLO)
+
+    P->>WK: send("camera-stream", frame, format="image")
+    Note over WK: Serializes frame to JPEG bytes.<br/>Detects offload active
+    WK->>R: SETEX("wkafka:claim:<uuid>", 5s, raw_bytes)
+    WK->>K: send(Topic, Header & JSON pointer: ~120 bytes)
+    Note over K: Broker handles sub-millisecond routing
+    K->>WK: raw_message
+    Note over WK: Intercepts x-wkafka-offload header
+    WK->>R: GET("wkafka:claim:<uuid>")
+    alt Frame alive in RAM (within 5s TTL)
+        R-->>WK: raw_bytes
+        Note over WK: Deserializes to np.ndarray
+        WK->>C: callback(msg) with original frame
+    else Frame expired (> 5s consumer lag)
+        Note over WK: on_expired="drop": Drops stale frame safely
+        WK-->>C: Skips callback, preserves 0 lag
+    end
+```
+
+### Flexible Configuration (Options A, B, C, & D)
+
+#### Option A: Load from Full Application YAML (`config.yaml`)
+Ideal for Kubernetes ConfigMaps where infrastructure settings are updated without altering Python code:
+```yaml
+kafka:
+  bootstrap_servers: "192.168.1.68:9092"
+  client_id: "vision-pipeline-extended"
+  offload:
+    backend: "redis"
+    host: "192.168.1.68"
+    port: 15963
+    password: null
+    db: 0
+    ttl: 5
+    on_expired: "drop"
+    formats:
+      - "image"
+      - "file"
+    threshold_kb: 50
+    key_prefix: "wkafka:claim:camera_1"
+```
+
+In Python:
+```python
+kafka = WKafka(config="config.yaml")
+# Or directly as first positional argument:
+kafka = WKafka("config.yaml")
+```
+
+#### Option B: Load Offload Block from Dedicated YAML
+```python
+kafka = WKafka(
+    bootstrap_servers="localhost:9092",
+    offload="offload_config.yaml"
+)
+```
+
+#### Option C: In-Memory Dictionary (Minimal or Extended)
+```python
+# Minimal configuration (uses defaults and localhost:6379 / REDIS_HOST)
+kafka = WKafka(
+    bootstrap_servers="localhost:9092",
+    offload={"backend": "redis", "ttl": 5}
+)
+
+# Extended configuration with custom network host/port and drop policy
+kafka = WKafka(
+    bootstrap_servers="localhost:9092",
+    offload={
+        "backend": "redis",
+        "host": "192.168.1.68",
+        "port": 15963,
+        "password": "<your_redis_password>",
+        "db": 0,
+        "ttl": 5,
+        "on_expired": "drop",
+        "formats": ["image", "file"],
+        "threshold_kb": 50,
+        "key_prefix": "wkafka:claim:cam1",
+    }
+)
+```
+
+#### Option D: Environment Variables (Docker & Kubernetes)
+```bash
+export REDIS_HOST="192.168.1.68"
+export REDIS_PORT="15963"
+```
+```python
+kafka = WKafka(offload={"backend": "redis", "ttl": 5})
+```
+
+### Producer & Consumer Implementation (100% Transparent)
+
+```python
+# 1. Producer (Camera Extractor)
+kafka = WKafka(bootstrap_servers="localhost:9092", offload={"backend": "redis", "ttl": 5})
+
+# Send as usual - offloading is transparent:
+kafka.send("camera-stream", value=frame, format="image")
+
+# 2. Consumer (Inference / Analytics)
+@kafka.consumer("camera-stream", format="image")
+def process_frame(msg):
+    frame = msg.value  # Seamlessly receives the numpy.ndarray from Redis RAM
+```
+
+---
+
 ## 🔒 Enterprise Security & Proxies
 
 ### SASL Authentication (PLAIN / SCRAM)
@@ -470,44 +609,47 @@ WKafka includes a comprehensive catalog of 15 fully functional example modules i
 | [`13_partition_scale`](examples/13_partition_scale) | 🚀 Scaling | Dynamic partition auto-scaling for true consumer parallelism. |
 | [`14_interactive_producer`](examples/14_interactive_producer) | 🎮 Tooling | Interactive CLI console for publishing messages in real time. |
 | [`15_long_running_background_tasks`](examples/15_long_running_background_tasks) | ⚡ Compute | Decoupled background workers preventing heartbeat timeouts. |
+| [`16_offload_basic`](examples/16_offload_basic) | 🚀 Offload | High-throughput Claim-Check pattern: frames in Redis RAM with 5s TTL. |
+| [`17_offload_extended`](examples/17_offload_extended) | 🌐 Enterprise | Production offloading via external `config.yaml` and custom network ports. |
 
 ---
 
-## 🛠️ Tecnologías y Librerías Relevantes
+## 🛠️ Key Technologies and Libraries
 
-- **Python (3.9 - 3.14)**: Lenguaje principal de desarrollo y runtime distribuido.
-- **kafka-python-ng / kafka-python**: Driver de conexión para comunicación de bajo nivel con el protocolo de Apache Kafka y Apache Kafka KRaft.
-- **OpenCV (`opencv-python`) & Pillow**: Decodificación, compresión, renderizado y manipulación de imágenes de visión por computador.
-- **NumPy**: Manipulación de matrices y arreglos multidimensionales para transmisión eficiente de imágenes.
-- **Pydantic (v1 / v2)**: Validación declarativa y tipado estricto de contratos de datos.
-- **PyYAML**: Serialización y análisis seguro de especificaciones y archivos de configuración en formato YAML.
-- **Loguru**: Framework de registro y trazabilidad estructurada de eventos y errores.
-- **Pytest & Coverage**: Entorno de validación unitaria automatizada e informes de cobertura de código.
-- **Docker**: Entorno aislado y sandbox para ejecución homogénea de tests y despliegue de infraestructura Kafka.
+- **Python (3.9 - 3.14)**: Core programming language and execution runtime.
+- **kafka-python-ng / kafka-python**: Low-level client driver for Apache Kafka and KRaft protocol communication.
+- **WRedis (`wredis`)**: High-speed in-memory database and caching layer for ephemeral multimedia offloading.
+- **OpenCV (`opencv-python`) & Pillow**: Computer vision matrix manipulation, image decoding, rendering, and JPEG compression.
+- **NumPy**: Multidimensional arrays and tensor buffers for real-time video matrices.
+- **Pydantic (v1 / v2)**: Declarative validation and strictly-typed data contracts.
+- **PyYAML**: Safe parsing and serialization of declarative configuration manifests.
+- **Loguru**: Structured logging framework for distributed event traceability.
+- **Pytest & Coverage**: Automated unit test suites and comprehensive coverage reporting.
+- **Docker**: Isolated sandboxing for consistent testing across environments.
 
 ---
 
 ## 🧪 Unit Testing & Coverage
 
-El proyecto cuenta con una batería completa de pruebas unitarias que validan serializadores, reintentos, DLQ, offsets manuales, ejecuciones en segundo plano y concurrencia.
+The project includes an exhaustive unit test suite verifying serializers, retry policies, DLQ routing, manual offsets, decoupled execution, dynamic partition scaling, and Claim-Check payload offload.
 
-### 1. Ejecutar Tests Localmente (pytest)
+### 1. Run Tests Locally (pytest)
 ```bash
 poetry run pytest tests/ -v
 ```
 
-### 2. Generar Reporte de Cobertura (Mínimo 80% Garantizado)
+### 2. Generate Coverage Report (Guaranteed >80%)
 ```bash
 ./run_coverage.sh
 ```
-Este script ejecuta `pytest --cov=wkafka --cov-fail-under=80` y genera un reporte HTML detallado en `htmlcov/index.html`. Actualmente garantiza más del **92% de cobertura de código**.
+This script runs `pytest --cov=wkafka --cov-fail-under=80` and outputs a comprehensive HTML report in `htmlcov/index.html`. It currently guarantees over **88% code coverage**.
 
-### 3. Ejecutar Tests en Contenedor Docker Aislado
-Para asegurar paridad total con entornos de integración continua y producción:
+### 3. Run Tests in Isolated Docker Container
+To ensure strict parity with CI/CD and production environments:
 ```bash
 ./run_tests_docker.sh
 ```
-El script construye y ejecuta las pruebas dentro de un contenedor Docker homogéneo con todas las dependencias del sistema y de Python.
+The script runs the full test suite inside an isolated `python:3.13-slim` container with all operating system and Python dependencies installed.
 
 ---
 
