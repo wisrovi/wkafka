@@ -683,6 +683,12 @@ The script runs the full test suite inside an isolated `python:3.13-slim` contai
 
 ---
 
+## 🗺️ Future Roadmap
+
+For planned architectural features, GPU batching optimizations, hybrid Tiered Storage (S3/MinIO), and zero-copy shared memory capabilities, see [ROADMAP.md](ROADMAP.md).
+
+---
+
 ## 👤 Author & Affiliation
 
 * **Author:** William Steve Rodriguez Villamizar (Wisrovi)
