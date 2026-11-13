@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>wkafka v1.0.6 | Enterprise-Grade Python Kafka Suite</title>
+    <title>wkafka v1.5.0 | Enterprise-Grade Python Kafka Suite</title>
 
     <!-- SEO & Meta Tags -->
-    <meta name="description" content="wkafka v1.0.6: The most resilient, parallel, and scalable Python Kafka library. Built-in support for JSON, OpenCV real-time image matrix streaming, Pydantic validation, partition auto-scaling, and 96% test coverage.">
+    <meta name="description" content="wkafka v1.5.0: The most resilient, parallel, and scalable Python Kafka library. Built-in support for JSON, OpenCV real-time image matrix streaming, RAM payload offloading with WRedis (Claim-Check pattern), Pydantic validation, and dynamic partition auto-scaling.">
     <meta name="keywords" content="python, kafka, wkafka, streaming, opencv, vision, pydantic, snappy, microservices, wpipe, wisrovi">
     <meta name="author" content="William Steve Rodriguez Villamizar (wisrovi)">
     <meta name="robots" content="index, follow">
@@ -340,7 +340,7 @@
         <div class="hero-bg-fx"></div>
         <div class="container">
             <div class="hero-badge">
-                <i class="fas fa-shield-alt"></i> v1.0.6 LTS — Enterprise Reliability
+                <i class="fas fa-shield-alt"></i> v1.5.0 — High-Throughput RAM Payload Offloading
             </div>
             <h1>The engine for <br><span class="gradient-text">Streaming Microservices</span></h1>
             <p>
@@ -430,6 +430,12 @@
                     <div class="tour-lvl">Resiliency Pro</div>
                 </div>
                 <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-memory"></i></div>
+                    <h3>RAM Payload Offload</h3>
+                    <p>Transparent Claim-Check pattern via WRedis: heavy frames live in RAM with 5s TTL, Kafka carries ~120 byte references.</p>
+                    <div class="tour-lvl">v1.5.0 Feature</div>
+                </div>
+                <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-cubes"></i></div>
                     <h3>WPipe Architecture</h3>
                     <p>Seamless integration into WPipe pipelines (<code>dto/</code>, <code>states/</code>, <code>main.py</code>) with forensic <code>tracking_db</code> persistence.</p>
@@ -476,12 +482,12 @@
         </div>
     </section>
 
-    <!-- 14 Tested Examples Tour Section -->
+    <!-- 17 Tested Examples Tour Section -->
     <section id="tour" class="tour-section">
         <div class="container">
             <div class="section-header">
                 <span class="gradient-text" style="font-weight: 800; text-transform: uppercase;">Verified Catalog</span>
-                <h2>14 Tested <span class="gradient-text">Production Modules</span></h2>
+                <h2>17 Tested <span class="gradient-text">Production Modules</span></h2>
                 <p>Every module tested live against real Kafka brokers (<code>EXAMPLES_STATUS.md</code>):</p>
             </div>
             <div class="tour-grid">
@@ -505,6 +511,11 @@
                     <h3>Advanced Patterns</h3>
                     <p>Native Async Triggers, Pydantic Schema Validation, Partition Scaling, and Interactive Dispatcher.</p>
                 </div>
+                <div class="tour-card">
+                    <div class="tour-lvl">15 - 17</div>
+                    <h3>High-Scale & Offload</h3>
+                    <p>Long-Running Background Workers, Basic RAM Offloading (Claim-Check), and Extended YAML Config.</p>
+                </div>
             </div>
             <div style="text-align: center; margin-top: 4rem;">
                 <a href="https://github.com/wisrovi/wkafka/tree/main/examples" class="btn btn-outline">Explore Examples Directory</a>
@@ -527,6 +538,10 @@
                 <div class="feature-card">
                     <h3>kafka-python-ng</h3>
                     <p>Low-latency Kafka protocol client core.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>WRedis</h3>
+                    <p>In-memory data structures and RAM offloading layer.</p>
                 </div>
                 <div class="feature-card">
                     <h3>OpenCV & Pillow</h3>
