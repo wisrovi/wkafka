@@ -18,25 +18,42 @@ class Wkafka(WKafka):
         max_retries: int = 3,
         dynamic_group_id: bool = False,
         partition_scale: bool = False,
+        offload: Optional[Union[Dict[str, Any], str, bool]] = None,
+        config: Optional[str] = None,
         other_config: Optional[dict] = None,
         **kwargs: Any,
     ):
-        """Initialize Wkafka instance with environment defaults and options."""
+        """Initialize Wkafka instance with environment defaults and options.
+
+        Supports payload offloading via 'offload' and YAML loading via 'config'.
+        """
+        # Support positional config file in first argument if passed
+        config_file = config
+        if isinstance(server, str) and (
+            server.endswith(".yaml")
+            or server.endswith(".yml")
+            or (os.path.exists(server) and ":" not in server)
+        ):
+            config_file = server
+            server = None
+
         bootstrap = (
             os.environ.get("KAFKA_SERVER")
             or server
             or kwargs.pop("bootstrap_servers", None)
         )
 
-        config = other_config or {}
-        config.update(kwargs)
+        cfg = other_config or {}
+        cfg.update(kwargs)
 
         super().__init__(
             bootstrap_servers=bootstrap,
             client_id=name,
             dynamic_group_id=dynamic_group_id,
             partition_scale=partition_scale,
-            **config,
+            offload=offload,
+            config=config_file,
+            **cfg,
         )
 
     def consumer(
