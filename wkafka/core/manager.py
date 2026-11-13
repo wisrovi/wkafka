@@ -2,6 +2,7 @@
 
 import asyncio
 import concurrent.futures
+import contextlib
 import inspect
 import json
 import os
@@ -14,6 +15,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from kafka import KafkaConsumer, KafkaProducer
 from loguru import logger
 
+from wkafka.core.config import (
+    OffloadConfig,
+    parse_offload_config,
+    resolve_kafka_config,
+)
 from wkafka.core.models import Message
 from wkafka.serializers.base import (
     FileSerializer,
@@ -60,6 +66,8 @@ class WKafka:
         client_id: Optional[str] = None,
         dynamic_group_id: bool = False,
         partition_scale: bool = False,
+        offload: Optional[Union[Dict[str, Any], str, bool]] = None,
+        config: Optional[str] = None,
         **extra_config: Any,
     ):
         """Initializes WKafka manager instance with specified configurations."""
@@ -68,18 +76,67 @@ class WKafka:
             logger.add("wkafka.log", rotation="10 MB", level="INFO")
             _LOG_CONFIGURED = True
 
+        config_file = config
+        if isinstance(bootstrap_servers, str) and (
+            bootstrap_servers.endswith(".yaml")
+            or bootstrap_servers.endswith(".yml")
+            or (os.path.exists(bootstrap_servers) and ":" not in bootstrap_servers)
+        ):
+            config_file = bootstrap_servers
+            bootstrap_servers = None
+
+        resolved = resolve_kafka_config(config_path=config_file, **extra_config)
+
         self.bootstrap_servers = (
-            os.environ.get("KAFKA_SERVER") or bootstrap_servers or "localhost:9092"
+            resolved.get("bootstrap_servers")
+            or resolved.get("kafka_server")
+            or os.environ.get("KAFKA_SERVER")
+            or bootstrap_servers
+            or "localhost:9092"
         )
-        self.client_id = client_id or "wkafka-client"
+        self.client_id = resolved.get("client_id") or client_id or "wkafka-client"
         self.dynamic_group_id = dynamic_group_id
         self.partition_scale = partition_scale
-        self.extra_config = _normalize_proxy_config(extra_config)
+
+        offload_arg = offload if offload is not None else resolved.get("offload")
+        self.offload_config: OffloadConfig = parse_offload_config(
+            offload_arg=offload_arg, config_path=config_file
+        )
+        self._offload_backend: Any = None
+
+        clean_extra = dict(extra_config)
+        clean_extra.pop("offload", None)
+        self.extra_config = _normalize_proxy_config(clean_extra)
         self._consumers_registry: List[
             Tuple[KafkaConsumer, Callable, Dict[str, Any]]
         ] = []
         self._producer_instance: Optional[KafkaProducer] = None
         self._lock = threading.Lock()
+
+    def _get_offload_backend(self) -> Any:
+        """Retrieves or lazily instantiates the offload storage backend."""
+        with self._lock:
+            if self._offload_backend is None:
+                if self.offload_config.backend == "redis":
+                    try:
+                        from wredis.keyvalue import RedisKeyValueManager
+
+                        self._offload_backend = RedisKeyValueManager(
+                            host=self.offload_config.host,
+                            port=self.offload_config.port,
+                            db=self.offload_config.db,
+                            password=self.offload_config.password,
+                            verbose=False,
+                        )
+                    except ImportError as err:
+                        raise ImportError(
+                            "WRedis is required for payload offloading. Please install 'wredis'."
+                        ) from err
+                else:
+                    raise ValueError(
+                        f"Unsupported offload backend: {self.offload_config.backend}"
+                    )
+            return self._offload_backend
 
     @property
     def consumers(self) -> List[Tuple[KafkaConsumer, Callable, Dict[str, Any]]]:
@@ -406,19 +463,77 @@ class WKafka:
                         except Exception:
                             headers[k_str] = v
 
+                # Check for offloaded payload
+                is_offloaded = False
+                claim_id = None
+                orig_format = data_format
+
+                if headers.get("x-wkafka-offload") == "redis":
+                    is_offloaded = True
+                    claim_id = headers.get("x-wkafka-claim-id")
+                    orig_format = headers.get("x-wkafka-format") or data_format
+
                 value = raw_msg.value
-                if data_format in self._SERIALIZERS:
+
+                if (not is_offloaded or not claim_id) and isinstance(
+                    value, (bytes, bytearray)
+                ):
                     try:
-                        kwargs = {}
-                        if model:
-                            kwargs["model"] = model
-                        value = self._SERIALIZERS[data_format].deserialize(
-                            value, **kwargs
-                        )
-                    except Exception as e:
-                        logger.error(
-                            f"Failed to deserialize message in {data_format}: {e}"
-                        )
+                        env = json.loads(value.decode("utf-8"))
+                        if isinstance(env, dict) and env.get("__wkafka_offload__"):
+                            is_offloaded = True
+                            claim_id = claim_id or env.get("claim_id")
+                            orig_format = (
+                                orig_format or env.get("format") or data_format
+                            )
+                    except Exception:
+                        pass
+
+                if is_offloaded and claim_id:
+                    backend = self._get_offload_backend()
+                    raw_payload = backend.get_bytes(claim_id)
+
+                    if raw_payload is None:
+                        if self.offload_config.on_expired == "drop":
+                            logger.debug(
+                                f"Offloaded claim key '{claim_id}' expired in Redis. Dropping message offset {raw_msg.offset}."
+                            )
+                            if commit_on_receive:
+                                with contextlib.suppress(Exception):
+                                    consumer.commit()
+                            continue
+                        else:
+                            value = None
+                    else:
+                        fmt_to_use = orig_format or data_format
+                        if fmt_to_use in self._SERIALIZERS:
+                            try:
+                                kwargs = {}
+                                if model:
+                                    kwargs["model"] = model
+                                value = self._SERIALIZERS[fmt_to_use].deserialize(
+                                    raw_payload, **kwargs
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    f"Failed to deserialize offloaded payload in {fmt_to_use}: {e}"
+                                )
+                                value = raw_payload
+                        else:
+                            value = raw_payload
+                else:
+                    if data_format in self._SERIALIZERS:
+                        try:
+                            kwargs = {}
+                            if model:
+                                kwargs["model"] = model
+                            value = self._SERIALIZERS[data_format].deserialize(
+                                value, **kwargs
+                            )
+                        except Exception as e:
+                            logger.error(
+                                f"Failed to deserialize message in {data_format}: {e}"
+                            )
 
                 commit_callback = (
                     (lambda: consumer.commit())
@@ -514,29 +629,69 @@ class WKafka:
         key: Optional[str] = None,
         format: str = "json",
         headers: Optional[Dict[str, Any]] = None,
+        offload: Optional[bool] = None,
         **kwargs: Any,
     ) -> Any:
-        """Sends a message to the specified Kafka topic using the configured serializer."""
+        """Sends a message to the specified Kafka topic using the configured serializer and optional offloading."""
         producer = self._get_producer()
 
         if format in self._SERIALIZERS:
             serialized_value = self._SERIALIZERS[format].serialize(value, **kwargs)
+        elif isinstance(value, bytes):
+            serialized_value = value
+        elif isinstance(value, str):
+            serialized_value = value.encode("utf-8")
         else:
             serialized_value = value
 
+        final_headers = dict(headers or {})
+
+        should_offload = False
+        if offload is True:
+            should_offload = True
+        elif offload is not False and self.offload_config.enabled:
+            if format in self.offload_config.formats:
+                should_offload = True
+            elif self.offload_config.threshold_kb > 0 and len(serialized_value) >= (
+                self.offload_config.threshold_kb * 1024
+            ):
+                should_offload = True
+
+        if should_offload:
+            claim_id = f"{self.offload_config.key_prefix}:{uuid.uuid4().hex}"
+            backend = self._get_offload_backend()
+            backend.setex(claim_id, self.offload_config.ttl, serialized_value)
+
+            final_headers["x-wkafka-offload"] = "redis"
+            final_headers["x-wkafka-claim-id"] = claim_id
+            final_headers["x-wkafka-format"] = format
+
+            serialized_value = json.dumps(
+                {
+                    "__wkafka_offload__": True,
+                    "claim_id": claim_id,
+                    "format": format,
+                    "ts": time.time(),
+                    "size": (
+                        len(serialized_value)
+                        if hasattr(serialized_value, "__len__")
+                        else 0
+                    ),
+                }
+            ).encode("utf-8")
+
         kafka_headers = []
-        if headers:
-            for k, v in headers.items():
-                if isinstance(v, bytes):
-                    val = v
-                elif isinstance(v, (dict, list)):
-                    val = json.dumps(
-                        v,
-                        default=lambda o: vars(o) if hasattr(o, "__dict__") else str(o),
-                    ).encode("utf-8")
-                else:
-                    val = str(v).encode("utf-8")
-                kafka_headers.append((k, val))
+        for k, v in final_headers.items():
+            if isinstance(v, bytes):
+                val = v
+            elif isinstance(v, (dict, list)):
+                val = json.dumps(
+                    v,
+                    default=lambda o: vars(o) if hasattr(o, "__dict__") else str(o),
+                ).encode("utf-8")
+            else:
+                val = str(v).encode("utf-8")
+            kafka_headers.append((k, val))
 
         return producer.send(
             topic, value=serialized_value, key=key, headers=kafka_headers
