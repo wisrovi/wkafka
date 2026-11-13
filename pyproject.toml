@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wkafka"
-version = "1.5.0"
+version = "1.5.1"
 description = "A professional, decorator-based Kafka wrapper for Python with built-in support for multimedia and JSON."
 authors = ["William Steve Rodriguez Villamizar <wisrovi.rodriguez@gmail.com>"]
 license = "MIT"
@@ -41,6 +41,8 @@ all = ["python-snappy", "wredis"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
+pytest-cov = ">=5.0.0"
+pydantic = ">=2.0.0"
 mypy = "^1.8.0"
 ruff = "^0.2.0"
 tox = "^4.12.0"
