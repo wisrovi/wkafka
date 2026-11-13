@@ -1,39 +1,42 @@
 # 🧪 Status and Verification Report of WKafka Examples (`EXAMPLES_STATUS.md`)
 
-Este documento registra la verificación en tiempo real de todos los **14 módulos de ejemplos** de `wkafka` ejecutados de extremo a extremo contra un clúster de Apache Kafka real (instancia activa en `localhost:29092`).
-
-Todas las pruebas se realizaron sin mocks ni respuestas simuladas en código.
+This document records the verification and architecture report for all **17 example modules** of `wkafka` executed against an Apache Kafka broker and integrated services.
 
 ---
 
-## 📊 Tabla Resumen de Ejecución y Verificación
+## 📊 Summary Table of Execution and Verification
 
-| # | Módulo de Ejemplo | Concepto / Característica Pruebas | Envío (Producer) | Recepción (Consumer) | Estado Final | Detalles y Observaciones Reales de Ejecución |
+| # | Example Module | Concept / Tested Feature | Producer Status | Consumer Status | Final State | Verification Details & Observations |
 | :-: | :--- | :--- | :-: | :-: | :-: | :--- |
-| **01** | `01_basic` | Mensajería JSON básica | ✅ OK | ✅ OK | 🟢 PASS | Payload `{"hello": "world", "status": "online"}` serializado y consumido correctamente. |
-| **02** | `02_advanced` | Routing Keys y Headers | ✅ OK | ✅ OK | 🟢 PASS | Key `system_monitor` y Headers `{"priority": "high", "origin": "node-01"}` recibidos intactos. |
-| **03** | `03_multimedia` | Stream continuo de imágenes | ✅ OK | ✅ OK | 🟢 PASS | Transmisión de fotograma OpenCV en tiempo real; recibido con dimensions `(480, 640, 3)`. |
-| **04** | `04_security_sasl` | Autenticación SASL PLAIN | ⚠️ N/A | ⚠️ N/A | 🟡 CONFIG | Código de conexión SASL validado contra especificación (requires clúster SASL en `localhost:30092`). |
-| **05** | `05_patterns` | Microservicios Worker / Client | ✅ OK | ✅ OK | 🟢 PASS | Flujo bidireccional completo: `tasks` -> `worker` -> `results` -> `client` (`{'id': 101, 'done': True}`). |
-| **06** | `06_images` | Img PIL & OpenCV (`format="image"`) | ✅ OK | ✅ OK | 🟢 PASS | Matriz de píxeles BGR recibida y decodificada exitosamente en consumidor (`(360, 640, 3)`). |
-| **07** | `07_files` | Archivos binarios (`format="file"`) | ✅ OK | ✅ OK | 🟢 PASS | Archivos `document_1.txt` y `document_2.txt` guardados físicamente en `received_pipeline_files/`. |
-| **08** | `08_manual_commit` | Commit manual (`msg.commit()`) | ✅ OK | ✅ OK | 🟢 PASS | Offsets `0`, `1` y `2` confirmados manualmente en broker con `auto_commit=False`. |
-| **09** | `09_retries_and_dlq` | Reintentos automáticos y DLQ | ✅ OK | ✅ OK | 🟢 PASS | 3 reintentos fallidos de carga corrupta capturados y ruteados a `unstable_events_topic.DLQ`. |
-| **10** | `10_multi_topic_regex` | Multi-tópico y patrones Regex | ✅ OK | ✅ OK | 🟢 PASS | Consumidor registrado procesó eventos concurrentes desde `sensor_temp` y `sensor_humidity`. |
-| **11** | `11_async_handlers` | Consumidores con `async / await` | ✅ OK | ✅ OK | 🟢 PASS | Handlers con `async def` ejecutados en bucle de eventos no bloqueante sin excepciones. |
-| **12** | `12_pydantic_validation` | Esquemas Pydantic (`format="pydantic"`) | ✅ OK | ✅ OK | 🟢 PASS | Instancia de `UserModel` (`id=101`, `username="alice"`) validada y deserializada automáticamente. |
-| **13** | `13_partition_scale` | Auto-escalado de particiones | ✅ OK | ✅ OK | 🟢 PASS | Tópico `partition_scaled_topic` auto-escalado dinámicamente de 1 a 2 particiones en KafkaAdminClient. |
-| **14** | `14_interactive_producer` | Consola interactiva CLI | ✅ OK | ✅ OK | 🟢 PASS | Interfaz CLI interactiva `input()` transmitió mensajes dinámicos consumidos en tiempo real. |
-| **15** | `15_long_running_background_tasks` | Workers en segundo plano y commit temprano | ✅ OK | ✅ OK | 🟢 PASS | Procesamiento desacoplado con `commit_on_receive=True` y `background=True` evitando rebalanceos por timeout. |
+| **01** | `01_basic` | Simple JSON messaging | ✅ OK | ✅ OK | 🟢 PASS | Payload `{"hello": "world", "status": "online"}` serialized and consumed cleanly. |
+| **02** | `02_advanced` | Routing Keys and Headers | ✅ OK | ✅ OK | 🟢 PASS | Key `system_monitor` and Headers `{"priority": "high", "origin": "node-01"}` verified intact. |
+| **03** | `03_multimedia` | Continuous OpenCV image streaming | ✅ OK | ✅ OK | 🟢 PASS | Real-time OpenCV frame streaming; received with dimensions `(480, 640, 3)`. |
+| **04** | `04_security_sasl` | SASL PLAIN authentication | ⚠️ N/A | ⚠️ N/A | 🟡 CONFIG | Validated against SASL specification (requires SASL broker on port 30092). |
+| **05** | `05_patterns` | Worker / Client microservices | ✅ OK | ✅ OK | 🟢 PASS | Bidirectional workflow: `tasks` -> `worker` -> `results` -> `client`. |
+| **06** | `06_images` | Img PIL & OpenCV (`format="image"`) | ✅ OK | ✅ OK | 🟢 PASS | BGR pixel matrix received and decoded in consumer (`(360, 640, 3)`). |
+| **07** | `07_files` | Binary file transfer (`format="file"`) | ✅ OK | ✅ OK | 🟢 PASS | Files transmitted and stored in `received_pipeline_files/`. |
+| **08** | `08_manual_commit` | Manual commit (`msg.commit()`) | ✅ OK | ✅ OK | 🟢 PASS | Offsets manually acknowledged with `auto_commit=False`. |
+| **09** | `09_retries_and_dlq` | Automatic retries and DLQ | ✅ OK | ✅ OK | 🟢 PASS | Failed payloads retried and routed to dead letter queue. |
+| **10** | `10_multi_topic_regex` | Multi-topic and regex matching | ✅ OK | ✅ OK | 🟢 PASS | Registered consumer processed events from multi-topic patterns. |
+| **11** | `11_async_handlers` | Asynchronous consumers (`async/await`) | ✅ OK | ✅ OK | 🟢 PASS | Handlers with `async def` executed in event loop without exceptions. |
+| **12** | `12_pydantic_validation` | Pydantic validation (`format="pydantic"`)| ✅ OK | ✅ OK | 🟢 PASS | Typed `UserModel` validated and deserialized automatically. |
+| **13** | `13_partition_scale` | Dynamic partition auto-scaling | ✅ OK | ✅ OK | 🟢 PASS | Topic partitions scaled dynamically via `KafkaAdminClient`. |
+| **14** | `14_interactive_producer` | Interactive CLI console | ✅ OK | ✅ OK | 🟢 PASS | Interactive prompt published user-typed messages in real time. |
+| **15** | `15_long_running_background_tasks` | Decoupled background workers | ✅ OK | ✅ OK | 🟢 PASS | Decoupled processing with `commit_on_receive=True` and `background=True`. |
+| **16** | `16_offload_basic` | Basic RAM Payload Offload (Claim-Check)| ✅ OK | ✅ OK | 🟢 PASS | JPEG frames stored in Redis RAM with 5s TTL; Kafka carries lightweight JSON pointers (~120 bytes). |
+| **17** | `17_offload_extended` | Extended YAML Offload & Drop Policies | ✅ OK | ✅ OK | 🟢 PASS | External `config.yaml` loaded seamlessly; custom IP/port, namespace prefix, and `on_expired="drop"` verified. |
 
 ---
 
-## 🛠️ Tecnologías y Librerías Relevantes
+## 🛠️ Key Technologies and Libraries
 
-- **Python (3.9 - 3.14)**: Lenguaje y entorno de desarrollo.
-- **Apache Kafka Broker**: Servidor de eventos distribuido en tiempo real (Broker ejecutable en `localhost:29092`).
-- **`kafka-python-ng`**: Client base de protocolo Apache Kafka con soporte para `KafkaAdminClient` y `NewPartitions`.
-- **OpenCV (`opencv-python`) & Pillow (PIL)**: Renderizado, matriz de píxeles, codificación JPEG y deserialización multimedia.
-- **Pydantic**: Validación y tipado de modelos estructurados.
-- **Loguru**: Trazabilidad y logs estructurados de eventos en consola y archivos de registro.
-- **Pytest**: Entorno de ejecución de tests unitarios y cálculo de cobertura de código.
+- **Python (3.9 - 3.14)**: Core language and execution runtime.
+- **WKafka**: Professional Kafka orchestrator with automatic Claim-Check payload offload.
+- **WRedis (`wredis`)**: High-speed in-memory database and caching layer for ephemeral video matrices.
+- **Apache Kafka Broker**: Distributed event streaming platform.
+- **`kafka-python-ng`**: Apache Kafka client with admin partition scaling support.
+- **OpenCV (`opencv-python`) & Pillow (PIL)**: Computer vision rendering, pixel matrix handling, and JPEG compression.
+- **Pydantic**: Data validation and structured modeling.
+- **PyYAML (`yaml`)**: Declarative configuration parsing.
+- **Loguru**: Structured logging for diagnostics and auditing.
+- **Pytest**: Automated testing framework.
