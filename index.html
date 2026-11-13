@@ -340,7 +340,7 @@
         <div class="hero-bg-fx"></div>
         <div class="container">
             <div class="hero-badge">
-                <i class="fas fa-shield-alt"></i> v1.5.0 — High-Throughput RAM Payload Offloading
+                <i class="fas fa-shield-alt"></i> v1.5.1 — High-Throughput RAM Payload Offloading & Benchmarked
             </div>
             <h1>The engine for <br><span class="gradient-text">Streaming Microservices</span></h1>
             <p>
@@ -431,9 +431,9 @@
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-memory"></i></div>
-                    <h3>RAM Payload Offload</h3>
-                    <p>Transparent Claim-Check pattern via WRedis: heavy frames live in RAM with 5s TTL, Kafka carries ~120 byte references.</p>
-                    <div class="tour-lvl">v1.5.0 Feature</div>
+                    <h3>RAM Payload Offload (Claim-Check)</h3>
+                    <p>Decouple heavy frames to WRedis in RAM (5s TTL): 654x smaller broker wire payload (166B vs 106KB) and 34% faster E2E latency.</p>
+                    <div class="tour-lvl">v1.5.1 Benchmark</div>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-cubes"></i></div>
