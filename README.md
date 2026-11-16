@@ -14,7 +14,81 @@
 
 **Production-Grade, Decorator-Driven Apache Kafka Framework for Python.**
 
-**WKafka** simplifies event-driven architectures by eliminating boilerplate code. It transforms raw, low-level Apache Kafka clients into an intuitive, elegant, and resilient development experience. With first-class native support for **JSON**, **YAML**, **Computer Vision Images (OpenCV / Pillow)**, **Arbitrary Binary Files (PDF, ZIP, TXT)**, and **Strict Pydantic Validation**, WKafka powers high-throughput microservices, IoT telemetry, real-time multimedia, and AI/ML inference pipelines.
+**WKafka** simplifies event-driven architectures by eliminating low-level boilerplate code. It transforms raw Apache Kafka clients into an intuitive, elegant, and resilient development experience. With first-class native support for **JSON**, **YAML**, **Computer Vision Images (OpenCV / Pillow)**, **Arbitrary Binary Files (PDF, ZIP, TXT)**, **Strict Pydantic Validation**, and **Ultra-High Throughput RAM Payload Offloading (WRedis Claim-Check)**, WKafka powers mission-critical microservices, IoT telemetry, real-time multimedia, and AI/ML inference pipelines.
+
+---
+
+## 📑 Table of Contents
+
+- [🏛️ Architectural Overview](#️-architectural-overview)
+- [🌟 Why WKafka?](#-why-wkafka)
+- [📦 Installation](#-installation)
+- [🚀 5-Minute Quick Start](#-5-minute-quick-start)
+- [🧬 Built-in Serializers Deep Dive](#-built-in-serializers-deep-dive)
+  - [1. JSON (`format="json"`)](#1-json-formatjson)
+  - [2. YAML (`format="yaml"`)](#2-yaml-formatyaml)
+  - [3. Images & Video Frames (`format="image"`)](#3-images--video-frames-formatimage)
+  - [4. Arbitrary Binary Files & Documents (`format="file"`)](#4-arbitrary-binary-files--documents-formatfile)
+  - [5. Pydantic Models (`format="pydantic"`)](#5-pydantic-models-formatpydantic)
+- [📤 Producer Guide](#-producer-guide)
+- [📥 Consumer Guide](#-consumer-guide)
+  - [1. Manual Offset Commits (At-Least-Once Delivery)](#1-manual-offset-commits-at-least-once-delivery)
+  - [2. Automatic Retries & Dead Letter Queue (DLQ)](#2-automatic-retries--dead-letter-queue-dlq)
+  - [3. Multi-Topic & Regex Pattern Subscriptions](#3-multi-topic--regex-pattern-subscriptions)
+  - [4. Partition Key Filtering](#4-partition-key-filtering)
+  - [5. Asynchronous Coroutines (`async / await`)](#5-asynchronous-coroutines-async--await)
+- [⚡ Long-Running Tasks & Decoupled Workers (The ML Dilemma)](#-long-running-tasks--decoupled-workers-the-ml-dilemma)
+- [🚀 Dynamic Partition Auto-Scaling (`partition_scale=True`)](#-dynamic-partition-auto-scaling-partition_scaletrue)
+- [🚀 High-Throughput RAM Payload Offloading (Claim-Check with WRedis)](#-high-throughput-ram-payload-offloading-claim-check-pattern-with-wredis)
+  - [The Vision & Large-File Bottleneck](#the-vision--large-file-bottleneck)
+  - [Transparent Claim-Check Architecture Flow](#transparent-claim-check-architecture-flow)
+  - [📊 Empirical Performance Benchmark: HD 1080p Video Transmission](#-empirical-performance-benchmark-hd-1080p-video-transmission)
+  - [Flexible Configuration (Options A, B, C, & D)](#flexible-configuration-options-a-b-c--d)
+- [🔒 Enterprise Security & Proxies](#-enterprise-security--proxies)
+- [📋 Comprehensive API Reference](#-comprehensive-api-reference)
+- [🗂️ 17 Production-Ready Examples](#️-17-production-ready-examples)
+- [🛠️ Key Technologies and Libraries](#️-key-technologies-and-libraries)
+- [🧪 Unit Testing & Coverage](#-unit-testing--coverage)
+- [🗺️ Future Roadmap](#️-future-roadmap)
+- [👤 Author & Affiliation](#-author--affiliation)
+- [📜 License](#-license)
+
+---
+
+## 🏛️ Architectural Overview
+
+```
++========================================================================================+
+|                                    WKAFKA ECOSYSTEM                                    |
++========================================================================================+
+|                                                                                        |
+|   📤 PRODUCER SUBSYSTEM (`kafka.producer()`, `kafka.send(...)`)                        |
+|   +--------------------------------------------------------------------------------+   |
+|   |  • Safe Flushing: Context manager auto-flush & socket cleanup                   |   |
+|   |  • Native Serializers: JSON, YAML, OpenCV/Pillow, Binary Files, Pydantic       |   |
+|   |  • Compression: Transparent Snappy or Gzip payload compression                 |   |
+|   |  • Transparent Claim-Check: Ephemeral RAM offload to Redis for frames/files    |   |
+|   +--------------------------------------------------------------------------------+   |
+|                                          |                                             |
+|                     Wire Messages (~166B Claim-Check or Direct)                        |
+|                                          v                                             |
+|   🌐 APACHE KAFKA CLUSTER / KRAFT                                                      |
+|   +--------------------------------------------------------------------------------+   |
+|   |  • Dynamic Partition Scaling: Auto-scale topic partitions based on concurrency  |   |
+|   |  • Enterprise Security: SASL (PLAIN, SCRAM-256, SCRAM-512), SSL/TLS, SOCKS5    |   |
+|   +--------------------------------------------------------------------------------+   |
+|                                          |                                             |
+|                                          v                                             |
+|   📥 CONSUMER SUBSYSTEM (`@kafka.consumer(...)`)                                       |
+|   +--------------------------------------------------------------------------------+   |
+|   |  • Clean Decorator Syntax: Multi-topic, regex pattern, key filtering           |   |
+|   |  • Zero Heartbeat Dropouts: `background=True` decoupled ThreadPoolExecutor     |   |
+|   |  • Resilience & DLQ: Exponential retries & automatic Dead Letter Queue routing   |   |
+|   |  • At-Least-Once Delivery: `commit_on_receive=True` or manual `msg.commit()`   |   |
+|   |  • Native Async: Direct coroutine execution (`async def`)                      |   |
+|   +--------------------------------------------------------------------------------+   |
++========================================================================================+
+```
 
 ---
 
@@ -29,7 +103,7 @@ Raw Kafka clients require dozens of lines of repetitive boilerplate: manually se
 * ⚡ **Decoupled Heavy Computation**: Prevent Kafka's infamous `CommitFailedError` / `max_poll_interval_ms` rebalance loops during hours-long ML tasks via `background=True` and `commit_on_receive=True`.
 * 🛡️ **Built-in Resilience**: Automatic retries with exponential backoff and automated Dead Letter Queue (DLQ) routing with diagnostic error headers.
 * 🚀 **Dynamic Partition Auto-Scaling**: Automatically detect consumer concurrency and scale topic partitions on the broker via `KafkaAdminClient` (`partition_scale=True`).
-* ⚡ **High-Throughput Payload Offloading**: Stream high-FPS computer vision matrices or heavy files directly in Redis RAM with automated TTL via `wredis` while Kafka routes ultra-lightweight Claim-Check references (~120 bytes).
+* ⚡ **High-Throughput Payload Offloading**: Stream high-FPS computer vision matrices or heavy files directly in Redis RAM with automated TTL via `wredis` while Kafka routes ultra-lightweight Claim-Check references (~166 bytes).
 * 🔒 **Enterprise Security**: Native support for SASL (PLAIN, SCRAM-SHA-256, SCRAM-SHA-512), SSL/TLS, and SOCKS5 proxies.
 * ⚡ **Async/Await Ready**: Native execution of asynchronous coroutine handlers (`async def`).
 
@@ -336,7 +410,7 @@ def heavy_ocr_pipeline(msg):
 kafka.run_consumers(block=True)
 ```
 
-### Architecture Diagram
+### Architecture Flow
 ```
 Kafka Topic ────────► KafkaConsumer Loop Thread (poll)
                             │
@@ -375,38 +449,45 @@ Streaming high-frequency multimedia (e.g. 30 FPS at 1080p OpenCV matrices) or mu
 2. **Commit Latency & Rebalances:** Transporting heavy binaries slows down consumer polling and offset commits.
 3. **Stale Frames Accumulation:** If a downstream consumer lags during deep learning inference (e.g., YOLO or segmentation), Kafka queues up gigabytes of outdated frames instead of maintaining real-time video state.
 
-### The Solution: Transparent Claim-Check via WRedis
+### Transparent Claim-Check Architecture Flow
 WKafka natively implements the **Claim-Check Pattern** powered by `WRedis`:
 1. **Producer Side:** Heavy payloads (e.g. `format="image"` or `format="file"`) are compressed and written directly to Redis in RAM with a short Time-To-Live (TTL = 5 seconds).
-2. **Kafka Broker:** Transfers only an ultra-lightweight JSON Claim-Check pointer (~120 bytes) containing headers and routing keys.
+2. **Kafka Broker:** Transfers only an ultra-lightweight JSON Claim-Check pointer (~166 bytes) containing headers and routing keys.
 3. **Consumer Side:** Intercepts the Claim-Check reference, retrieves the binary payload directly from Redis RAM, and decodes it back to the original object (`numpy.ndarray` for images) transparently.
 4. **Drop-on-Expired Policy:** If a consumer lags beyond the TTL (5s), stale frames evaporate from RAM and are skipped automatically without crashing (`on_expired="drop"`), keeping your pipeline strictly real-time!
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor P as Producer (Camera Extractor)
-    participant WK as WKafka Engine
-    participant R as Redis RAM (WRedis)
-    participant K as Kafka Broker
-    actor C as Consumer (Vision AI / YOLO)
-
-    P->>WK: send("camera-stream", frame, format="image")
-    Note over WK: Serializes frame to JPEG bytes.<br/>Detects offload active
-    WK->>R: SETEX("wkafka:claim:<uuid>", 5s, raw_bytes)
-    WK->>K: send(Topic, Header & JSON pointer: ~166 bytes)
-    Note over K: Broker handles sub-millisecond routing
-    K->>WK: raw_message
-    Note over WK: Intercepts x-wkafka-offload header
-    WK->>R: GET("wkafka:claim:<uuid>")
-    alt Frame alive in RAM (within 5s TTL)
-        R-->>WK: raw_bytes
-        Note over WK: Deserializes to np.ndarray
-        WK->>C: callback(msg) with original frame
-    else Frame expired (> 5s consumer lag)
-        Note over WK: on_expired="drop": Drops stale frame safely
-        WK-->>C: Skips callback, preserves 0 lag
-    end
+```
++---------------------------------------------------------------------------------------+
+|                       TRANSPARENT CLAIM-CHECK ARCHITECTURE FLOW                       |
++---------------------------------------------------------------------------------------+
+|                                                                                       |
+|   1. Producer (Camera Extractor)                                                      |
+|      │                                                                                |
+|      │───> send("camera-stream", frame, format="image")                               |
+|      │     [WKafka serializes frame to JPEG bytes]                                    |
+|      │                                                                                |
+|      ├───> Writes heavy frame bytes to Redis RAM ───> [ Redis RAM (WRedis) ]          |
+|      │     (SETEX "wkafka:claim:<uuid>", 5s, bytes)            │                      |
+|      │                                                         │                      |
+|      └───> Sends ultra-light JSON Claim-Check pointer          │                      |
+|            (~166 bytes) to Kafka Broker                        │                      |
+|            │                                                   │                      |
+|            v                                                   │                      |
+|   2. [ Apache Kafka Broker ] (Sub-millisecond routing)         │                      |
+|            │                                                   │                      |
+|            v                                                   │                      |
+|   3. Consumer (Vision AI / YOLO)                               │                      |
+|      │                                                         │                      |
+|      │───> Intercepts x-wkafka-offload header & pointer        │                      |
+|      │                                                         │                      |
+|      ├───> Fetches frame bytes from Redis RAM <────────────────┘                      |
+|      │                                                                                |
+|      ├───> [Frame alive within 5s TTL]                                                |
+|      │     Deserializes to np.ndarray ──> Executes callback(msg)                      |
+|      │                                                                                |
+|      └───> [Frame expired (>5s lag)]                                                  |
+|            on_expired="drop" ──> Skips stale frame, keeps lag strictly 0              |
++---------------------------------------------------------------------------------------+
 ```
 
 ### 📊 Empirical Performance Benchmark: HD 1080p Video Transmission
@@ -427,7 +508,6 @@ To quantify real-world efficiency gains, an empirical benchmark was conducted ru
 | **Consumer Lagging Behavior** | Broker disk fills up with stale frames | Stale frames auto-expire in RAM (TTL) | Zero broker crashes; strictly real-time inference |
 | **Developer Experience** | Manual multi-step serialization | **100% transparent**: Receives native `np.ndarray` | Zero code changes to existing consumer callbacks |
 
-> [!TIP]
 > **Key Architectural Takeaway:** By decoupling routing metadata (~166 bytes) from heavy multimedia buffers stored in volatile RAM, Kafka brokers operate at pure wire speed without GC pauses or disk I/O bottlenecks. Consumers lagging behind automatically skip obsolete frames due to Redis TTL expiration (`on_expired="drop"`), ensuring computer vision models always process the latest frame.
 
 To reproduce these benchmarks locally using Docker Compose:
@@ -618,9 +698,9 @@ Received by consumer callback functions:
 
 ---
 
-## 🗂️ 15 Production-Ready Examples
+## 🗂️ 17 Production-Ready Examples
 
-WKafka includes a comprehensive catalog of 15 fully functional example modules in the `examples/` directory:
+WKafka includes a comprehensive catalog of 17 fully functional example modules in the `examples/` directory:
 
 | Directory | Level | Architectural Concept |
 | :--- | :--- | :--- |
